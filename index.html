@@ -11,7 +11,7 @@
 <style>
   * { -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-  input:focus, select:focus { outline: none; }
+  input:focus, select:focus, textarea:focus { outline: none; }
   .modal-bg { background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); }
 </style>
 </head>
@@ -30,7 +30,9 @@ const modalEl = document.getElementById('modal');
 
 let mode = 'login';
 let currentUser = null;
+let currentTab = 'home';
 let subjects = [];
+let tasks = [];
 let expandedId = null;
 
 const EMOJIS = ['📐','📖','🔬','✝️','🌎','🏛️','🇬🇧','🎨','🎵','🏃','💻','📚'];
@@ -42,10 +44,13 @@ async function checkAuth() {
 }
 
 async function loadAndRender() {
-  const { data, error } = await sb.from('subjects').select('*, grades(*)').order('created_at');
-  if (error) { console.error(error); subjects = []; }
-  else subjects = data || [];
-  renderApp();
+  const [subRes, taskRes] = await Promise.all([
+    sb.from('subjects').select('*, grades(*)').order('created_at'),
+    sb.from('tasks').select('*').order('due_date', { ascending: true })
+  ]);
+  subjects = subRes.data || [];
+  tasks = taskRes.data || [];
+  renderShell();
 }
 
 function renderAuth() {
@@ -63,25 +68,19 @@ function renderAuth() {
             <button onclick="setMode('signup')" class="flex-1 py-2 rounded-lg font-semibold text-sm transition ${mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}">Criar conta</button>
           </div>
           <form onsubmit="handleAuth(event)" class="space-y-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label>
-              <input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 focus:border-blue-700">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label>
-              <input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 focus:border-blue-700">
-              <div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div>
-            </div>
-            <button type="submit" id="submitBtn" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-xl transition shadow-sm">${mode === 'login' ? 'Entrar' : 'Criar minha conta'}</button>
+            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
+            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div>
+            <button type="submit" id="submitBtn" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-xl">${mode === 'login' ? 'Entrar' : 'Criar minha conta'}</button>
             <div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div>
           </form>
         </div>
-        <div class="text-center text-xs text-slate-400 mt-6">Versão de teste · v0.2</div>
+        <div class="text-center text-xs text-slate-400 mt-6">v0.3</div>
       </div>
     </div>
   `;
 }
 
+// ============ HELPERS ============
 function calcMean(grades) {
   const valid = (grades || []).filter(g => g.score !== null && g.score !== undefined);
   if (valid.length === 0) return null;
@@ -113,62 +112,132 @@ function fmt(n) {
   return Number(n).toFixed(1).replace('.', ',');
 }
 
-function renderApp() {
+function dayDiff(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const now = new Date(); now.setHours(0,0,0,0);
+  d.setHours(0,0,0,0);
+  return Math.round((d - now) / (1000*60*60*24));
+}
+
+function urgencyLabel(diff) {
+  if (diff === null) return { text: 'Sem prazo', tag: 'bg-slate-100 text-slate-500' };
+  if (diff < 0) return { text: `${Math.abs(diff)}d atrasada`, tag: 'bg-red-100 text-red-700' };
+  if (diff === 0) return { text: 'Hoje', tag: 'bg-red-100 text-red-700' };
+  if (diff === 1) return { text: 'Amanhã', tag: 'bg-amber-100 text-amber-700' };
+  if (diff <= 7) return { text: `${diff} dias`, tag: 'bg-blue-100 text-blue-700' };
+  return { text: `${diff} dias`, tag: 'bg-slate-100 text-slate-600' };
+}
+
+// ============ SHELL ============
+function renderShell() {
   const initial = (currentUser.email || 'U')[0].toUpperCase();
-  const totalGrades = subjects.reduce((s, sub) => s + (sub.grades || []).filter(g => g.score !== null).length, 0);
-  const subjectsWithMean = subjects.map(s => ({ ...s, mean: calcMean(s.grades) })).filter(s => s.mean !== null);
-  const overallMean = subjectsWithMean.length > 0
-    ? subjectsWithMean.reduce((s, sub) => s + sub.mean, 0) / subjectsWithMean.length
-    : null;
-
   app.innerHTML = `
-    <div class="min-h-screen pb-20">
-      <div class="max-w-md mx-auto px-5 pt-8">
-
-        <div class="flex items-center justify-between mb-6">
+    <div class="min-h-screen pb-24">
+      <div class="max-w-md mx-auto px-5 pt-6">
+        <div class="flex items-center justify-between mb-5">
           <div>
             <div class="text-xs text-slate-500 font-medium">Olá,</div>
-            <div class="text-base font-bold text-slate-900 truncate max-w-[220px]">${currentUser.email}</div>
+            <div class="text-sm font-bold text-slate-900 truncate max-w-[220px]">${currentUser.email}</div>
           </div>
-          <div class="flex gap-2 items-center">
-            <div class="w-11 h-11 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-blue-900/20">${initial}</div>
+          <div class="flex items-center gap-2">
+            <button onclick="logout()" class="text-xs text-slate-500 hover:text-slate-900 px-2 py-1">Sair</button>
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-blue-900/20">${initial}</div>
           </div>
         </div>
-
-        <div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-6 relative overflow-hidden">
-          <div class="absolute -top-4 -right-2 text-9xl opacity-5 font-thin">✧</div>
-          <div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">✦ Versículo do dia</div>
-          <div class="text-sm leading-relaxed font-medium mb-2">"Porque sou eu que conheço os planos que tenho para vocês, planos de fazê-los prosperar e dar a vocês esperança e um futuro."</div>
-          <div class="text-xs font-semibold opacity-85">Jeremias 29:11</div>
+        <div id="tabContent">
+          ${currentTab === 'home' ? renderHome() : currentTab === 'grades' ? renderGrades() : renderTasks()}
         </div>
-
-        <div class="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl p-5 text-white mb-6 relative overflow-hidden">
-          <div class="absolute -top-2 right-2 text-8xl opacity-10">📊</div>
-          <div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">Média geral</div>
-          <div class="text-4xl font-extrabold mb-1">${fmt(overallMean)}</div>
-          <div class="text-xs opacity-80">${subjectsWithMean.length} matéria(s) com nota · ${totalGrades} avaliação(ões) lançada(s)</div>
-        </div>
-
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-base font-bold text-slate-900">Minhas notas</div>
-          <button onclick="openSubjectModal()" class="text-xs font-semibold text-blue-700 hover:text-blue-900">+ Matéria</button>
-        </div>
-
-        <div class="space-y-2 mb-4">
-          ${subjects.length === 0 ? `
-            <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center">
-              <div class="text-4xl mb-3">📚</div>
-              <div class="text-sm font-semibold text-slate-900 mb-1">Sem matérias ainda</div>
-              <div class="text-xs text-slate-500 mb-4">Adiciona suas matérias do bimestre pra começar a controlar suas notas.</div>
-              <button onclick="openSubjectModal()" class="bg-blue-900 hover:bg-blue-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Adicionar primeira matéria</button>
-            </div>
-          ` : subjects.map(s => renderSubjectCard(s)).join('')}
-        </div>
-
-        <button onclick="logout()" class="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl transition text-sm mt-6">Sair</button>
-
-        <div class="text-center text-xs text-slate-400 mt-6">Versão de teste · v0.2</div>
       </div>
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-40">
+      <div class="max-w-md mx-auto flex justify-around px-2 py-2 pb-5">
+        ${navBtn('home', '🏠', 'Início')}
+        ${navBtn('grades', '📊', 'Notas')}
+        ${navBtn('tasks', '📚', 'Tarefas')}
+      </div>
+    </div>
+  `;
+}
+
+function navBtn(tab, icon, label) {
+  const active = currentTab === tab;
+  return `<button onclick="setTab('${tab}')" class="flex flex-col items-center gap-1 px-4 py-1 ${active ? 'text-blue-900' : 'text-slate-400'}"><div class="text-xl">${icon}</div><div class="text-[10px] font-bold uppercase tracking-wide">${label}</div></button>`;
+}
+
+function setTab(tab) { currentTab = tab; renderShell(); }
+
+// ============ HOME ============
+function renderHome() {
+  const meansArr = subjects.map(s => calcMean(s.grades)).filter(m => m !== null);
+  const overallMean = meansArr.length > 0 ? meansArr.reduce((s, m) => s + m, 0) / meansArr.length : null;
+  const totalGrades = subjects.reduce((s, sub) => s + (sub.grades || []).filter(g => g.score !== null).length, 0);
+
+  const upcomingTasks = tasks.filter(t => !t.completed).slice(0, 3);
+
+  return `
+    <div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-4 relative overflow-hidden">
+      <div class="absolute -top-4 -right-2 text-9xl opacity-5 font-thin">✧</div>
+      <div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">✦ Versículo do dia</div>
+      <div class="text-sm leading-relaxed font-medium mb-2">"Porque sou eu que conheço os planos que tenho para vocês, planos de fazê-los prosperar e dar a vocês esperança e um futuro."</div>
+      <div class="text-xs font-semibold opacity-85">Jeremias 29:11</div>
+    </div>
+
+    <div class="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl p-5 text-white mb-4 relative overflow-hidden">
+      <div class="absolute -top-2 right-2 text-7xl opacity-10">📊</div>
+      <div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">Média geral</div>
+      <div class="text-4xl font-extrabold mb-1">${fmt(overallMean)}</div>
+      <div class="text-xs opacity-80">${meansArr.length} matéria(s) · ${totalGrades} avaliação(ões)</div>
+    </div>
+
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-base font-bold text-slate-900">Próximas tarefas</div>
+      <button onclick="setTab('tasks')" class="text-xs font-semibold text-blue-700">Ver todas →</button>
+    </div>
+
+    <div class="space-y-2">
+      ${upcomingTasks.length === 0 ? `
+        <div class="bg-white border border-slate-100 rounded-2xl p-5 text-center text-sm text-slate-500">
+          Nenhuma tarefa pendente. Tudo em dia!
+        </div>
+      ` : upcomingTasks.map(t => renderTaskMini(t)).join('')}
+    </div>
+  `;
+}
+
+function renderTaskMini(t) {
+  const diff = dayDiff(t.due_date);
+  const urg = urgencyLabel(diff);
+  const subject = subjects.find(s => s.id === t.subject_id);
+  return `
+    <div class="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-lg">${subject?.emoji || '📋'}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-semibold text-slate-900 truncate">${t.title}</div>
+        <div class="text-xs text-slate-400">${subject?.name || 'Geral'}</div>
+      </div>
+      <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full ${urg.tag}">${urg.text}</span>
+    </div>
+  `;
+}
+
+// ============ GRADES ============
+function renderGrades() {
+  return `
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-xl font-bold text-slate-900">Minhas notas</div>
+      <button onclick="openSubjectModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Matéria</button>
+    </div>
+    <div class="space-y-2">
+      ${subjects.length === 0 ? `
+        <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center">
+          <div class="text-4xl mb-3">📚</div>
+          <div class="text-sm font-semibold text-slate-900 mb-1">Sem matérias ainda</div>
+          <div class="text-xs text-slate-500 mb-4">Adicione suas matérias do bimestre.</div>
+          <button onclick="openSubjectModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Adicionar primeira matéria</button>
+        </div>
+      ` : subjects.map(s => renderSubjectCard(s)).join('')}
     </div>
   `;
 }
@@ -195,9 +264,7 @@ function renderSubjectCard(s) {
 
       ${expanded ? `
         <div class="border-t border-slate-100 p-4 bg-slate-50">
-          ${grades.length === 0 ? `
-            <div class="text-center py-3 text-xs text-slate-500">Nenhuma avaliação cadastrada ainda.</div>
-          ` : `
+          ${grades.length === 0 ? '<div class="text-center py-3 text-xs text-slate-500 mb-2">Nenhuma avaliação cadastrada ainda.</div>' : `
             <div class="space-y-2 mb-3">
               ${grades.map(g => `
                 <div class="flex items-center gap-3 bg-white rounded-xl p-3">
@@ -212,16 +279,10 @@ function renderSubjectCard(s) {
             </div>
           `}
 
-          ${pendingCount > 0 && needed !== null ? `
-            <div class="rounded-xl p-3 mb-3 ${needed > 10 ? 'bg-red-50 text-red-700' : needed <= 0 ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'} text-xs font-medium leading-relaxed">
-              ${needed > 10 ? '⚠️ Mesmo tirando 10 nas pendentes, não dá pra fechar com média 7. Foca em recuperação.' :
-                needed <= 0 ? '✅ Mesmo zerando as pendentes, você passa com média 7.' :
-                `🎯 Pra fechar com média 7, você precisa tirar pelo menos <strong>${fmt(needed)}</strong> ${pendingCount > 1 ? 'em média nas pendentes' : 'na pendente'}.`}
-            </div>
-          ` : ''}
+          ${renderMeanTip(mean, needed, pendingCount)}
 
           <div class="flex gap-2">
-            <button onclick="openGradeModal('${s.id}')" class="flex-1 bg-blue-900 hover:bg-blue-800 text-white text-sm font-semibold py-2.5 rounded-xl">+ Adicionar nota</button>
+            <button onclick="openGradeModal('${s.id}')" class="flex-1 bg-blue-900 text-white text-sm font-semibold py-2.5 rounded-xl">+ Adicionar nota</button>
             <button onclick="deleteSubject('${s.id}', '${s.name.replace(/'/g, '')}')" class="bg-white border border-slate-200 text-slate-500 hover:text-red-600 text-sm font-semibold px-4 rounded-xl">Apagar</button>
           </div>
         </div>
@@ -230,11 +291,101 @@ function renderSubjectCard(s) {
   `;
 }
 
-function toggleSubject(id) {
-  expandedId = expandedId === id ? null : id;
-  renderApp();
+function renderMeanTip(mean, needed, pendingCount) {
+  if (mean === null && pendingCount === 0) {
+    return `<div class="rounded-xl p-3 mb-3 bg-slate-100 text-slate-600 text-xs font-medium leading-relaxed">📝 Adicione suas avaliações pra começar a acompanhar a média.</div>`;
+  }
+
+  if (pendingCount > 0 && needed !== null) {
+    if (needed > 10) {
+      return `<div class="rounded-xl p-3 mb-3 bg-red-50 text-red-700 text-xs font-medium leading-relaxed">⚠️ Mesmo tirando 10 nas avaliações pendentes, não dá pra fechar com média 7. Pensa em recuperação.</div>`;
+    }
+    if (needed <= 0) {
+      return `<div class="rounded-xl p-3 mb-3 bg-green-50 text-green-700 text-xs font-medium leading-relaxed">✅ Mesmo zerando as pendentes, você fecha com média 7. Tá voando.</div>`;
+    }
+    return `<div class="rounded-xl p-3 mb-3 bg-amber-50 text-amber-800 text-xs font-medium leading-relaxed">🎯 Pra fechar com média 7, você precisa tirar pelo menos <strong>${fmt(needed)}</strong> ${pendingCount > 1 ? 'em média nas pendentes' : 'na próxima'}.</div>`;
+  }
+
+  // sem pendentes
+  if (mean !== null && mean >= 7) {
+    return `<div class="rounded-xl p-3 mb-3 bg-green-50 text-green-700 text-xs font-medium leading-relaxed">✅ Sua média está em <strong>${fmt(mean)}</strong>, acima da meta de 7,0.</div>`;
+  }
+  if (mean !== null && mean < 7) {
+    const gap = 7 - mean;
+    return `<div class="rounded-xl p-3 mb-3 bg-amber-50 text-amber-800 text-xs font-medium leading-relaxed">⚠️ Sua média está em <strong>${fmt(mean)}</strong>. Faltam <strong>${fmt(gap)}</strong> ponto(s) pra atingir 7,0. Adicione uma próxima avaliação ou recuperação pra ver quanto precisa tirar.</div>`;
+  }
+  return '';
 }
 
+function toggleSubject(id) { expandedId = expandedId === id ? null : id; renderShell(); }
+
+// ============ TASKS ============
+function renderTasks() {
+  const pending = tasks.filter(t => !t.completed);
+  const done = tasks.filter(t => t.completed);
+  const grouped = { atrasada: [], hoje: [], semana: [], depois: [], sempraz: [] };
+  pending.forEach(t => {
+    const d = dayDiff(t.due_date);
+    if (d === null) grouped.sempraz.push(t);
+    else if (d < 0) grouped.atrasada.push(t);
+    else if (d === 0) grouped.hoje.push(t);
+    else if (d <= 7) grouped.semana.push(t);
+    else grouped.depois.push(t);
+  });
+
+  return `
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-xl font-bold text-slate-900">Minhas tarefas</div>
+      <button onclick="openTaskModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Tarefa</button>
+    </div>
+
+    ${tasks.length === 0 ? `
+      <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center">
+        <div class="text-4xl mb-3">📋</div>
+        <div class="text-sm font-semibold text-slate-900 mb-1">Sem tarefas</div>
+        <div class="text-xs text-slate-500 mb-4">Adicione provas, trabalhos e lembretes.</div>
+        <button onclick="openTaskModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Adicionar primeira tarefa</button>
+      </div>
+    ` : `
+      ${renderTaskGroup('Atrasadas', grouped.atrasada, 'red')}
+      ${renderTaskGroup('Hoje', grouped.hoje, 'red')}
+      ${renderTaskGroup('Esta semana', grouped.semana, 'blue')}
+      ${renderTaskGroup('Mais pra frente', grouped.depois, 'slate')}
+      ${renderTaskGroup('Sem prazo', grouped.sempraz, 'slate')}
+      ${done.length > 0 ? `
+        <div class="text-xs uppercase tracking-wide text-slate-400 font-bold mt-6 mb-2 px-1">Concluídas (${done.length})</div>
+        <div class="space-y-2">${done.map(t => renderTaskCard(t)).join('')}</div>
+      ` : ''}
+    `}
+  `;
+}
+
+function renderTaskGroup(label, list, color) {
+  if (list.length === 0) return '';
+  return `
+    <div class="text-xs uppercase tracking-wide font-bold mt-4 mb-2 px-1 text-${color}-600">${label} (${list.length})</div>
+    <div class="space-y-2">${list.map(t => renderTaskCard(t)).join('')}</div>
+  `;
+}
+
+function renderTaskCard(t) {
+  const subject = subjects.find(s => s.id === t.subject_id);
+  const diff = dayDiff(t.due_date);
+  const urg = urgencyLabel(diff);
+  return `
+    <div class="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100 ${t.completed ? 'opacity-60' : ''}">
+      <button onclick="toggleTaskComplete('${t.id}', ${t.completed})" class="w-6 h-6 rounded-md border-2 ${t.completed ? 'bg-blue-900 border-blue-900 text-white' : 'border-slate-300'} flex-shrink-0 flex items-center justify-center text-sm">${t.completed ? '✓' : ''}</button>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-semibold text-slate-900 truncate ${t.completed ? 'line-through' : ''}">${t.title}</div>
+        <div class="text-xs text-slate-400">${subject ? subject.emoji + ' ' + subject.name : 'Geral'}${t.due_date ? ' · ' + new Date(t.due_date).toLocaleDateString('pt-BR') : ''}</div>
+      </div>
+      ${!t.completed ? `<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full ${urg.tag} whitespace-nowrap">${urg.text}</span>` : ''}
+      <button onclick="deleteTask('${t.id}')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button>
+    </div>
+  `;
+}
+
+// ============ MODALS ============
 function openSubjectModal() {
   modalEl.classList.remove('hidden');
   modalEl.innerHTML = `
@@ -242,10 +393,7 @@ function openSubjectModal() {
       <div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl">
         <div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div>
         <form onsubmit="handleAddSubject(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label>
-            <input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700">
-          </div>
+          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label>
             <div class="grid grid-cols-6 gap-2" id="emojiPicker">
@@ -289,25 +437,13 @@ function openGradeModal(subjectId) {
       <div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl">
         <div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div>
         <form onsubmit="handleAddGrade(event, '${subjectId}')" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome da avaliação</label>
-            <input type="text" id="gradeName" required maxlength="40" placeholder="Ex: Prova 1, Trabalho..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700">
-          </div>
+          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="gradeName" required maxlength="40" placeholder="Ex: Prova 1, Trabalho..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label>
-              <input type="number" id="gradeWeight" required min="1" max="10" step="1" value="1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label>
-              <input type="number" id="gradeScore" min="0" max="10" step="0.1" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700">
-            </div>
+            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="gradeWeight" required min="1" max="10" step="1" value="1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
+            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="gradeScore" min="0" max="10" step="0.1" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label>
-            <input type="date" id="gradeDate" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700">
-          </div>
-          <div class="text-xs text-slate-400">Deixa a nota em branco se ainda não fez a prova. Você adiciona depois.</div>
+          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="gradeDate" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
+          <div class="text-xs text-slate-400">Deixa a nota em branco se ainda não fez. Adicione depois.</div>
           <div class="flex gap-2 pt-2">
             <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
             <button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button>
@@ -327,12 +463,57 @@ async function handleAddGrade(e, subjectId) {
   const score = scoreVal === '' ? null : Number(scoreVal);
   const dateVal = document.getElementById('gradeDate').value;
   const evaluation_date = dateVal === '' ? null : dateVal;
-
-  const { error } = await sb.from('grades').insert({
-    subject_id: subjectId, evaluation_name, weight, score, evaluation_date
-  });
+  const { error } = await sb.from('grades').insert({ subject_id: subjectId, evaluation_name, weight, score, evaluation_date });
   if (error) { alert('Erro: ' + error.message); return; }
   closeModal();
+  await loadAndRender();
+}
+
+function openTaskModal() {
+  modalEl.classList.remove('hidden');
+  const subjOpts = subjects.map(s => `<option value="${s.id}">${s.emoji} ${s.name}</option>`).join('');
+  modalEl.innerHTML = `
+    <div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()">
+      <div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl">
+        <div class="text-base font-bold text-slate-900 mb-4">Nova tarefa</div>
+        <form onsubmit="handleAddTask(event)" class="space-y-4">
+          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Título</label><input type="text" id="taskTitle" required maxlength="80" placeholder="Ex: Estudar pra prova de matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
+          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Matéria (opcional)</label><select id="taskSubject" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 bg-white"><option value="">Geral</option>${subjOpts}</select></div>
+          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data de entrega (opcional)</label><input type="date" id="taskDate" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
+            <button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  setTimeout(() => document.getElementById('taskTitle')?.focus(), 100);
+}
+
+async function handleAddTask(e) {
+  e.preventDefault();
+  const title = document.getElementById('taskTitle').value.trim();
+  const subjVal = document.getElementById('taskSubject').value;
+  const subject_id = subjVal === '' ? null : subjVal;
+  const dateVal = document.getElementById('taskDate').value;
+  const due_date = dateVal === '' ? null : dateVal;
+  const { error } = await sb.from('tasks').insert({ title, subject_id, due_date });
+  if (error) { alert('Erro: ' + error.message); return; }
+  closeModal();
+  await loadAndRender();
+}
+
+async function toggleTaskComplete(id, current) {
+  const { error } = await sb.from('tasks').update({ completed: !current, completed_at: !current ? new Date().toISOString() : null }).eq('id', id);
+  if (error) { alert('Erro: ' + error.message); return; }
+  await loadAndRender();
+}
+
+async function deleteTask(id) {
+  if (!confirm('Apagar essa tarefa?')) return;
+  const { error } = await sb.from('tasks').delete().eq('id', id);
+  if (error) { alert('Erro: ' + error.message); return; }
   await loadAndRender();
 }
 
@@ -351,11 +532,9 @@ async function deleteGrade(id) {
   await loadAndRender();
 }
 
-function closeModal() {
-  modalEl.classList.add('hidden');
-  modalEl.innerHTML = '';
-}
+function closeModal() { modalEl.classList.add('hidden'); modalEl.innerHTML = ''; }
 
+// ============ AUTH ============
 function setMode(newMode) { mode = newMode; renderAuth(); }
 
 function showMessage(text, type) {
@@ -384,7 +563,6 @@ async function handleAuth(e) {
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.classList.add('opacity-60');
   showMessage('Aguarde...', 'info');
-
   if (mode === 'signup') {
     const { error } = await sb.auth.signUp({ email, password });
     if (error) showMessage(translateError(error.message), 'error');
@@ -399,7 +577,7 @@ async function handleAuth(e) {
 
 async function logout() {
   await sb.auth.signOut();
-  currentUser = null; subjects = []; expandedId = null;
+  currentUser = null; subjects = []; tasks = []; expandedId = null; currentTab = 'home';
   renderAuth();
 }
 
