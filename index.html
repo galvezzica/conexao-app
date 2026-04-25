@@ -22,6 +22,15 @@
 <div id="modal" class="hidden"></div>
 
 <script>
+window.addEventListener('error', (e) => {
+  document.getElementById('app').innerHTML = `<div style="padding:20px;font-family:monospace;font-size:12px;background:#fee;color:#900;white-space:pre-wrap;word-break:break-all;">ERRO JS: ${e.message}\nArquivo: ${e.filename}\nLinha: ${e.lineno}\nColuna: ${e.colno}\n\n${e.error?.stack || ''}</div>`;
+});
+window.addEventListener('unhandledrejection', (e) => {
+  document.getElementById('app').innerHTML = `<div style="padding:20px;font-family:monospace;font-size:12px;background:#fee;color:#900;white-space:pre-wrap;word-break:break-all;">PROMISE ERRO: ${e.reason?.message || e.reason}\n\n${e.reason?.stack || ''}</div>`;
+});
+</script>
+
+<script>
 const SUPABASE_URL = 'https://nnoybujcgpkmosqlxcjn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lidWpjZ3BrbW9zcWx4Y2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzgwMzcsImV4cCI6MjA5MjcxNDAzN30.CYThoLKyG7rk2b-oKg7pEAIJ3r677PNo0tQJB8R7SF8';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -559,27 +568,4 @@ function renderPoints(stats) {
             <div class="text-sm font-semibold text-slate-900">${r.name}</div>
             <div class="text-xs text-amber-700 font-bold">${r.cost} pts</div>
           </div>
-          <button ${stats.totalPoints < r.cost ? 'disabled' : ''} onclick="claimReward('${r.name}', ${r.cost})" class="text-xs font-bold ${stats.totalPoints < r.cost ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-blue-900 text-white'} px-3 py-2 rounded-full">${stats.totalPoints < r.cost ? `Faltam ${r.cost - stats.totalPoints}` : 'Trocar'}</button>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-async function toggleHabit(key, points, done) {
-  const today = new Date().toISOString().slice(0, 10);
-  if (done) {
-    const { error } = await sb.from('habit_completions').delete().eq('habit_key', key).eq('completed_date', today);
-    if (error) { alert('Erro: ' + error.message); return; }
-  } else {
-    const { error } = await sb.from('habit_completions').insert({ habit_key: key, completed_date: today, points });
-    if (error) { alert('Erro: ' + error.message); return; }
-  }
-  await loadAndRender();
-}
-
-function claimReward(name, cost) {
-  alert(`"${name}" trocada! (Implementação completa em breve)`);
-}
-
-// =========
+          <button ${stats.totalPoints < r.cost ? 'disabled' : ''} onclick="claimReward('${r.name}', ${r.cost})" class="text-xs font-bold ${stats.totalPoints < r.cost ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-blue-900 text-white'} px-3 py-2 rounded-full">${stats.totalPoints < r.cost ? `Faltam ${r.cost - stats.totalPoints}` : 'Trocar'}</but
