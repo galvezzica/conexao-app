@@ -303,7 +303,10 @@ function renderPoints(stats) {
 async function toggleHabit(key, points, done) {
   const today = new Date().toISOString().slice(0, 10);
   if (done) await sb.from('habit_completions').delete().eq('habit_key', key).eq('completed_date', today);
-  else await sb.from('habit_completions').insert({ habit_key: key, completed_date: today, points });
+  else {
+    const { error } = await sb.from('habit_completions').insert({ habit_key: key, completed_date: today });
+    if (error && error.code !== '23505') alert('Erro: ' + error.message);
+  }
   await loadAndRender();
 }
 function claimReward(n, c) { alert('"'+n+'" trocada! (em breve)'); }
@@ -468,11 +471,4 @@ async function handleAuth(e) {
 }
 async function logout() {
   await sb.auth.signOut();
-  currentUser = null; subjects = []; tasks = []; prayers = []; allHabits = []; expandedId = null; currentTab = 'home';
-  renderAuth();
-}
-
-checkAuth();
-</script>
-</body>
-</html>
+  currentUser = null; subjects = []; tasks = []; prayers = []; allHabits = []; expa
