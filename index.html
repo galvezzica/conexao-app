@@ -13,6 +13,7 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
   input:focus, select:focus, textarea:focus { outline: none; }
   .modal-bg { background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); }
+  .scroll-x::-webkit-scrollbar { display: none; }
 </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -28,14 +29,38 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const app = document.getElementById('app');
 const modalEl = document.getElementById('modal');
 
+const HABITS = [
+  { key: 'sleep', text: 'Dormir antes das 22h', points: 15 },
+  { key: 'bible', text: 'Ler a Bíblia 10 min', points: 20 },
+  { key: 'exercise', text: 'Exercício físico', points: 15 },
+  { key: 'help', text: 'Ajudar em casa', points: 10 },
+  { key: 'water', text: 'Beber 2L de água', points: 10 },
+];
+
+const REWARDS = [
+  { name: 'Tema premium do app', cost: 2500, icon: '🎨' },
+  { name: 'Pacote de devocionais', cost: 1500, icon: '📚' },
+  { name: 'Playlist gospel exclusiva', cost: 800, icon: '🎵' },
+];
+
+const EMOJIS = ['📐','📖','🔬','✝️','🌎','🏛️','🇬🇧','🎨','🎵','🏃','💻','📚'];
+
+const PRAYER_COLORS = [
+  'from-pink-400 to-pink-600','from-blue-400 to-blue-600','from-emerald-400 to-emerald-600',
+  'from-amber-400 to-amber-600','from-purple-400 to-purple-600','from-rose-400 to-rose-600',
+  'from-cyan-400 to-cyan-600','from-orange-400 to-orange-600'
+];
+
 let mode = 'login';
 let currentUser = null;
 let currentTab = 'home';
 let subjects = [];
 let tasks = [];
+let prayers = [];
+let myReactions = new Set();
+let reactionCounts = {};
+let allHabitCompletions = [];
 let expandedId = null;
-
-const EMOJIS = ['📐','📖','🔬','✝️','🌎','🏛️','🇬🇧','🎨','🎵','🏃','💻','📚'];
 
 async function checkAuth() {
   const { data: { user } } = await sb.auth.getUser();
@@ -44,40 +69,25 @@ async function checkAuth() {
 }
 
 async function loadAndRender() {
-  const [subRes, taskRes] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [subRes, taskRes, prayRes, reactRes, habitRes, allReactRes] = await Promise.all([
     sb.from('subjects').select('*, grades(*)').order('created_at'),
-    sb.from('tasks').select('*').order('due_date', { ascending: true })
+    sb.from('tasks').select('*').order('due_date', { ascending: true }),
+    sb.from('prayers').select('*').order('created_at', { ascending: false }).limit(50),
+    sb.from('prayer_reactions').select('prayer_id').eq('user_id', currentUser.id),
+    sb.from('habit_completions').select('*').order('completed_date', { ascending: false }),
+    sb.from('prayer_reactions').select('prayer_id, reaction_type'),
   ]);
   subjects = subRes.data || [];
   tasks = taskRes.data || [];
+  prayers = prayRes.data || [];
+  myReactions = new Set((reactRes.data || []).map(r => r.prayer_id));
+  allHabitCompletions = habitRes.data || [];
+  reactionCounts = {};
+  (allReactRes.data || []).forEach(r => {
+    reactionCounts[r.prayer_id] = (reactionCounts[r.prayer_id] || 0) + 1;
+  });
   renderShell();
-}
-
-function renderAuth() {
-  app.innerHTML = `
-    <div class="min-h-screen flex items-center justify-center px-5 py-10">
-      <div class="w-full max-w-md">
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg shadow-blue-900/20">C</div>
-          <div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div>
-          <div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div>
-        </div>
-        <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
-          <div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl">
-            <button onclick="setMode('login')" class="flex-1 py-2 rounded-lg font-semibold text-sm transition ${mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}">Entrar</button>
-            <button onclick="setMode('signup')" class="flex-1 py-2 rounded-lg font-semibold text-sm transition ${mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}">Criar conta</button>
-          </div>
-          <form onsubmit="handleAuth(event)" class="space-y-4">
-            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div>
-            <button type="submit" id="submitBtn" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-xl">${mode === 'login' ? 'Entrar' : 'Criar minha conta'}</button>
-            <div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div>
-          </form>
-        </div>
-        <div class="text-center text-xs text-slate-400 mt-6">v0.3</div>
-      </div>
-    </div>
-  `;
 }
 
 // ============ HELPERS ============
@@ -107,31 +117,127 @@ function meanColor(mean) {
   return { text: 'text-red-600', bg: 'bg-red-50', label: 'Crítico' };
 }
 
-function fmt(n) {
-  if (n === null || n === undefined) return '—';
-  return Number(n).toFixed(1).replace('.', ',');
-}
+function fmt(n) { if (n === null || n === undefined) return '—'; return Number(n).toFixed(1).replace('.', ','); }
 
 function dayDiff(dateStr) {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
+  const d = new Date(dateStr); d.setHours(0,0,0,0);
   const now = new Date(); now.setHours(0,0,0,0);
-  d.setHours(0,0,0,0);
   return Math.round((d - now) / (1000*60*60*24));
 }
 
 function urgencyLabel(diff) {
   if (diff === null) return { text: 'Sem prazo', tag: 'bg-slate-100 text-slate-500' };
-  if (diff < 0) return { text: `${Math.abs(diff)}d atrasada`, tag: 'bg-red-100 text-red-700' };
+  if (diff < 0) return { text: `${Math.abs(diff)}d atras.`, tag: 'bg-red-100 text-red-700' };
   if (diff === 0) return { text: 'Hoje', tag: 'bg-red-100 text-red-700' };
   if (diff === 1) return { text: 'Amanhã', tag: 'bg-amber-100 text-amber-700' };
   if (diff <= 7) return { text: `${diff} dias`, tag: 'bg-blue-100 text-blue-700' };
   return { text: `${diff} dias`, tag: 'bg-slate-100 text-slate-600' };
 }
 
+function relTime(iso) {
+  const d = new Date(iso); const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'agora';
+  if (diff < 3600) return `há ${Math.floor(diff/60)} min`;
+  if (diff < 86400) return `há ${Math.floor(diff/3600)} h`;
+  if (diff < 172800) return 'ontem';
+  if (diff < 604800) return `${Math.floor(diff/86400)} dias atrás`;
+  return d.toLocaleDateString('pt-BR');
+}
+
+function colorForId(id) {
+  let h = 0; for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i)) % PRAYER_COLORS.length;
+  return PRAYER_COLORS[h];
+}
+
+function getStats() {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayCompletions = allHabitCompletions.filter(h => h.completed_date === today);
+  const todayKeys = new Set(todayCompletions.map(h => h.habit_key));
+
+  const totalPoints = allHabitCompletions.reduce((s, h) => s + (h.points || 0), 0);
+
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekStr = weekAgo.toISOString().slice(0, 10);
+  const weekPoints = allHabitCompletions.filter(h => h.completed_date >= weekStr).reduce((s, h) => s + (h.points || 0), 0);
+
+  // streak
+  const dates = [...new Set(allHabitCompletions.map(h => h.completed_date))].sort().reverse();
+  let streak = 0;
+  let cursor = new Date(); cursor.setHours(0,0,0,0);
+  for (const d of dates) {
+    const cursorStr = cursor.toISOString().slice(0,10);
+    if (d === cursorStr) { streak++; cursor.setDate(cursor.getDate() - 1); }
+    else if (d < cursorStr) {
+      // gap
+      if (streak === 0 && d === new Date(cursor.getTime() - 86400000).toISOString().slice(0,10)) {
+        // not today, but yesterday
+        cursor = new Date(cursor.getTime() - 86400000);
+        streak++;
+        cursor.setDate(cursor.getDate() - 1);
+      } else break;
+    }
+  }
+
+  const bibleCount = allHabitCompletions.filter(h => h.habit_key === 'bible').length;
+  const lateTasks = tasks.filter(t => !t.completed && t.due_date && new Date(t.due_date) < new Date()).length;
+  const pendingTasks = tasks.filter(t => !t.completed).length;
+  const totalCompletions = allHabitCompletions.length;
+
+  return { todayKeys, totalPoints, weekPoints, streak, bibleCount, lateTasks, pendingTasks, totalCompletions };
+}
+
+function getAchievements(stats) {
+  return [
+    { name: '7 dias seguidos', icon: '🏆', unlocked: stats.streak >= 7 },
+    { name: 'Leitor fiel', icon: '📖', unlocked: stats.bibleCount >= 7 },
+    { name: 'Sem atrasos', icon: '⚡', unlocked: stats.lateTasks === 0 && tasks.length > 0 },
+    { name: '30 dias', icon: '🔥', unlocked: stats.streak >= 30 },
+    { name: 'Maratonista', icon: '🏃', unlocked: stats.totalCompletions >= 100 },
+  ];
+}
+
+// ============ AUTH ============
+function renderAuth() {
+  app.innerHTML = `
+    <div class="min-h-screen flex items-center justify-center px-5 py-10">
+      <div class="w-full max-w-md">
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg shadow-blue-900/20">C</div>
+          <div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div>
+          <div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
+          <div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl">
+            <button onclick="setMode('login')" class="flex-1 py-2 rounded-lg font-semibold text-sm ${mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}">Entrar</button>
+            <button onclick="setMode('signup')" class="flex-1 py-2 rounded-lg font-semibold text-sm ${mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}">Criar conta</button>
+          </div>
+          <form onsubmit="handleAuth(event)" class="space-y-4">
+            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
+            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div>
+            <button type="submit" id="submitBtn" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-xl">${mode === 'login' ? 'Entrar' : 'Criar minha conta'}</button>
+            <div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div>
+          </form>
+        </div>
+        <div class="text-center text-xs text-slate-400 mt-6">v0.4</div>
+      </div>
+    </div>
+  `;
+}
+
 // ============ SHELL ============
 function renderShell() {
   const initial = (currentUser.email || 'U')[0].toUpperCase();
+  const stats = getStats();
+
+  let content = '';
+  if (currentTab === 'home') content = renderHome(stats);
+  else if (currentTab === 'tasks') content = renderTasks();
+  else if (currentTab === 'grades') content = renderGrades();
+  else if (currentTab === 'points') content = renderPoints(stats);
+  else if (currentTab === 'prayers') content = renderPrayers();
+
   app.innerHTML = `
     <div class="min-h-screen pb-24">
       <div class="max-w-md mx-auto px-5 pt-6">
@@ -142,20 +248,23 @@ function renderShell() {
           </div>
           <div class="flex items-center gap-2">
             <button onclick="logout()" class="text-xs text-slate-500 hover:text-slate-900 px-2 py-1">Sair</button>
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-blue-900/20">${initial}</div>
+            <div class="relative">
+              <div class="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md">${initial}</div>
+              <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+            </div>
           </div>
         </div>
-        <div id="tabContent">
-          ${currentTab === 'home' ? renderHome() : currentTab === 'grades' ? renderGrades() : renderTasks()}
-        </div>
+        ${content}
       </div>
     </div>
 
     <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-40">
-      <div class="max-w-md mx-auto flex justify-around px-2 py-2 pb-5">
+      <div class="max-w-md mx-auto flex justify-around px-1 py-2 pb-5">
         ${navBtn('home', '🏠', 'Início')}
-        ${navBtn('grades', '📊', 'Notas')}
         ${navBtn('tasks', '📚', 'Tarefas')}
+        ${navBtn('grades', '📊', 'Notas')}
+        ${navBtn('points', '⭐', 'Pontos')}
+        ${navBtn('prayers', '🙏', 'Oração')}
       </div>
     </div>
   `;
@@ -163,18 +272,15 @@ function renderShell() {
 
 function navBtn(tab, icon, label) {
   const active = currentTab === tab;
-  return `<button onclick="setTab('${tab}')" class="flex flex-col items-center gap-1 px-4 py-1 ${active ? 'text-blue-900' : 'text-slate-400'}"><div class="text-xl">${icon}</div><div class="text-[10px] font-bold uppercase tracking-wide">${label}</div></button>`;
+  return `<button onclick="setTab('${tab}')" class="flex flex-col items-center gap-0.5 px-2 py-1 ${active ? 'text-blue-900' : 'text-slate-400'}"><div class="text-lg">${icon}</div><div class="text-[9px] font-bold uppercase tracking-wide">${label}</div></button>`;
 }
 
-function setTab(tab) { currentTab = tab; renderShell(); }
+function setTab(tab) { currentTab = tab; expandedId = null; renderShell(); }
 
 // ============ HOME ============
-function renderHome() {
-  const meansArr = subjects.map(s => calcMean(s.grades)).filter(m => m !== null);
-  const overallMean = meansArr.length > 0 ? meansArr.reduce((s, m) => s + m, 0) / meansArr.length : null;
-  const totalGrades = subjects.reduce((s, sub) => s + (sub.grades || []).filter(g => g.score !== null).length, 0);
-
+function renderHome(stats) {
   const upcomingTasks = tasks.filter(t => !t.completed).slice(0, 3);
+  const subjectsWithMean = subjects.map(s => ({ ...s, mean: calcMean(s.grades) })).slice(0, 4);
 
   return `
     <div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-4 relative overflow-hidden">
@@ -184,25 +290,42 @@ function renderHome() {
       <div class="text-xs font-semibold opacity-85">Jeremias 29:11</div>
     </div>
 
-    <div class="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl p-5 text-white mb-4 relative overflow-hidden">
-      <div class="absolute -top-2 right-2 text-7xl opacity-10">📊</div>
-      <div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">Média geral</div>
-      <div class="text-4xl font-extrabold mb-1">${fmt(overallMean)}</div>
-      <div class="text-xs opacity-80">${meansArr.length} matéria(s) · ${totalGrades} avaliação(ões)</div>
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <div class="bg-white rounded-2xl p-4 border border-slate-100">
+        <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg mb-2">⭐</div>
+        <div class="text-2xl font-extrabold text-slate-900">${stats.weekPoints}</div>
+        <div class="text-xs text-slate-500 font-medium mt-0.5">pontos esta semana</div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 border border-slate-100">
+        <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-lg mb-2">📚</div>
+        <div class="text-2xl font-extrabold text-slate-900">${stats.pendingTasks}</div>
+        <div class="text-xs text-slate-500 font-medium mt-0.5">tarefas pendentes</div>
+      </div>
     </div>
 
     <div class="flex items-center justify-between mb-3">
       <div class="text-base font-bold text-slate-900">Próximas tarefas</div>
       <button onclick="setTab('tasks')" class="text-xs font-semibold text-blue-700">Ver todas →</button>
     </div>
-
-    <div class="space-y-2">
-      ${upcomingTasks.length === 0 ? `
-        <div class="bg-white border border-slate-100 rounded-2xl p-5 text-center text-sm text-slate-500">
-          Nenhuma tarefa pendente. Tudo em dia!
-        </div>
-      ` : upcomingTasks.map(t => renderTaskMini(t)).join('')}
+    <div class="space-y-2 mb-5">
+      ${upcomingTasks.length === 0 ? `<div class="bg-white border border-slate-100 rounded-2xl p-5 text-center text-sm text-slate-500">Tudo em dia!</div>`
+        : upcomingTasks.map(t => renderTaskMini(t)).join('')}
     </div>
+
+    ${subjectsWithMean.length > 0 ? `
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-base font-bold text-slate-900">Minhas médias</div>
+        <button onclick="setTab('grades')" class="text-xs font-semibold text-blue-700">Ver tudo →</button>
+      </div>
+      <div class="space-y-2">
+        ${subjectsWithMean.map(s => `
+          <div class="bg-white rounded-xl px-3 py-2.5 flex items-center justify-between border border-slate-100">
+            <div class="flex items-center gap-2.5"><span class="text-base">${s.emoji || '📚'}</span><span class="text-sm font-semibold text-slate-900">${s.name}</span></div>
+            <div class="text-base font-extrabold ${meanColor(s.mean).text}">${fmt(s.mean)}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
   `;
 }
 
@@ -217,18 +340,92 @@ function renderTaskMini(t) {
         <div class="text-sm font-semibold text-slate-900 truncate">${t.title}</div>
         <div class="text-xs text-slate-400">${subject?.name || 'Geral'}</div>
       </div>
-      <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full ${urg.tag}">${urg.text}</span>
+      <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full ${urg.tag} whitespace-nowrap">${urg.text}</span>
+    </div>
+  `;
+}
+
+// ============ TASKS ============
+function renderTasks() {
+  const pending = tasks.filter(t => !t.completed);
+  const done = tasks.filter(t => t.completed);
+  const grouped = { atrasada: [], hoje: [], semana: [], depois: [], sempraz: [] };
+  pending.forEach(t => {
+    const d = dayDiff(t.due_date);
+    if (d === null) grouped.sempraz.push(t);
+    else if (d < 0) grouped.atrasada.push(t);
+    else if (d === 0) grouped.hoje.push(t);
+    else if (d <= 7) grouped.semana.push(t);
+    else grouped.depois.push(t);
+  });
+
+  return `
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-xl font-bold text-slate-900">Minhas tarefas</div>
+      <button onclick="openTaskModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Tarefa</button>
+    </div>
+    ${tasks.length === 0 ? `
+      <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center">
+        <div class="text-4xl mb-3">📋</div>
+        <div class="text-sm font-semibold text-slate-900 mb-1">Sem tarefas</div>
+        <div class="text-xs text-slate-500 mb-4">Adicione provas, trabalhos e lembretes.</div>
+        <button onclick="openTaskModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Adicionar primeira tarefa</button>
+      </div>
+    ` : `
+      ${renderTaskGroup('Atrasadas', grouped.atrasada, 'red')}
+      ${renderTaskGroup('Hoje', grouped.hoje, 'red')}
+      ${renderTaskGroup('Esta semana', grouped.semana, 'blue')}
+      ${renderTaskGroup('Mais pra frente', grouped.depois, 'slate')}
+      ${renderTaskGroup('Sem prazo', grouped.sempraz, 'slate')}
+      ${done.length > 0 ? `
+        <div class="text-xs uppercase tracking-wide text-slate-400 font-bold mt-6 mb-2 px-1">Concluídas (${done.length})</div>
+        <div class="space-y-2">${done.map(t => renderTaskCard(t)).join('')}</div>
+      ` : ''}
+    `}
+  `;
+}
+
+function renderTaskGroup(label, list, color) {
+  if (list.length === 0) return '';
+  return `<div class="text-xs uppercase tracking-wide font-bold mt-4 mb-2 px-1 text-${color}-600">${label} (${list.length})</div><div class="space-y-2">${list.map(t => renderTaskCard(t)).join('')}</div>`;
+}
+
+function renderTaskCard(t) {
+  const subject = subjects.find(s => s.id === t.subject_id);
+  const diff = dayDiff(t.due_date);
+  const urg = urgencyLabel(diff);
+  return `
+    <div class="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100 ${t.completed ? 'opacity-60' : ''}">
+      <button onclick="toggleTaskComplete('${t.id}', ${t.completed})" class="w-6 h-6 rounded-md border-2 ${t.completed ? 'bg-blue-900 border-blue-900 text-white' : 'border-slate-300'} flex items-center justify-center text-sm flex-shrink-0">${t.completed ? '✓' : ''}</button>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-semibold text-slate-900 truncate ${t.completed ? 'line-through' : ''}">${t.title}</div>
+        <div class="text-xs text-slate-400">${subject ? subject.emoji + ' ' + subject.name : 'Geral'}${t.due_date ? ' · ' + new Date(t.due_date).toLocaleDateString('pt-BR') : ''}</div>
+      </div>
+      ${!t.completed ? `<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full ${urg.tag} whitespace-nowrap">${urg.text}</span>` : ''}
+      <button onclick="deleteTask('${t.id}')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button>
     </div>
   `;
 }
 
 // ============ GRADES ============
 function renderGrades() {
+  const meansArr = subjects.map(s => calcMean(s.grades)).filter(m => m !== null);
+  const overallMean = meansArr.length > 0 ? meansArr.reduce((s, m) => s + m, 0) / meansArr.length : null;
+  const totalEvals = subjects.reduce((s, sub) => s + (sub.grades || []).length, 0);
+
   return `
     <div class="flex items-center justify-between mb-3">
       <div class="text-xl font-bold text-slate-900">Minhas notas</div>
       <button onclick="openSubjectModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Matéria</button>
     </div>
+
+    <div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-5 relative overflow-hidden">
+      <div class="absolute -top-2 right-2 text-7xl opacity-10">📊</div>
+      <div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">📊 Média geral</div>
+      <div class="text-4xl font-extrabold mb-1">${fmt(overallMean)}</div>
+      <div class="text-xs opacity-80">${meansArr.length} matéria(s) · ${totalEvals} avaliação(ões)</div>
+    </div>
+
     <div class="space-y-2">
       ${subjects.length === 0 ? `
         <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center">
@@ -253,15 +450,14 @@ function renderSubjectCard(s) {
   return `
     <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
       <div onclick="toggleSubject('${s.id}')" class="p-4 flex items-center gap-3 cursor-pointer">
-        <div class="w-11 h-11 rounded-xl ${color.bg} flex items-center justify-center text-xl flex-shrink-0">${s.emoji || '📚'}</div>
+        <div class="w-11 h-11 rounded-xl ${color.bg} flex items-center justify-center text-xl">${s.emoji || '📚'}</div>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-bold text-slate-900 truncate">${s.name}</div>
           <div class="text-xs ${color.text} font-semibold">${color.label}${grades.length > 0 ? ' · ' + grades.length + ' avaliação(ões)' : ''}</div>
         </div>
         <div class="text-2xl font-extrabold ${color.text} px-3 py-1 ${color.bg} rounded-lg min-w-[58px] text-center">${fmt(mean)}</div>
-        <div class="text-slate-400 transition ${expanded ? 'rotate-180' : ''}">▾</div>
+        <div class="text-slate-400 ${expanded ? 'rotate-180' : ''} transition">▾</div>
       </div>
-
       ${expanded ? `
         <div class="border-t border-slate-100 p-4 bg-slate-50">
           ${grades.length === 0 ? '<div class="text-center py-3 text-xs text-slate-500 mb-2">Nenhuma avaliação cadastrada ainda.</div>' : `
@@ -278,9 +474,7 @@ function renderSubjectCard(s) {
               `).join('')}
             </div>
           `}
-
           ${renderMeanTip(mean, needed, pendingCount)}
-
           <div class="flex gap-2">
             <button onclick="openGradeModal('${s.id}')" class="flex-1 bg-blue-900 text-white text-sm font-semibold py-2.5 rounded-xl">+ Adicionar nota</button>
             <button onclick="deleteSubject('${s.id}', '${s.name.replace(/'/g, '')}')" class="bg-white border border-slate-200 text-slate-500 hover:text-red-600 text-sm font-semibold px-4 rounded-xl">Apagar</button>
@@ -292,24 +486,13 @@ function renderSubjectCard(s) {
 }
 
 function renderMeanTip(mean, needed, pendingCount) {
-  if (mean === null && pendingCount === 0) {
-    return `<div class="rounded-xl p-3 mb-3 bg-slate-100 text-slate-600 text-xs font-medium leading-relaxed">📝 Adicione suas avaliações pra começar a acompanhar a média.</div>`;
-  }
-
+  if (mean === null && pendingCount === 0) return `<div class="rounded-xl p-3 mb-3 bg-slate-100 text-slate-600 text-xs font-medium leading-relaxed">📝 Adicione suas avaliações pra começar a acompanhar a média.</div>`;
   if (pendingCount > 0 && needed !== null) {
-    if (needed > 10) {
-      return `<div class="rounded-xl p-3 mb-3 bg-red-50 text-red-700 text-xs font-medium leading-relaxed">⚠️ Mesmo tirando 10 nas avaliações pendentes, não dá pra fechar com média 7. Pensa em recuperação.</div>`;
-    }
-    if (needed <= 0) {
-      return `<div class="rounded-xl p-3 mb-3 bg-green-50 text-green-700 text-xs font-medium leading-relaxed">✅ Mesmo zerando as pendentes, você fecha com média 7. Tá voando.</div>`;
-    }
+    if (needed > 10) return `<div class="rounded-xl p-3 mb-3 bg-red-50 text-red-700 text-xs font-medium leading-relaxed">⚠️ Mesmo tirando 10 nas pendentes, não dá pra fechar com média 7. Pensa em recuperação.</div>`;
+    if (needed <= 0) return `<div class="rounded-xl p-3 mb-3 bg-green-50 text-green-700 text-xs font-medium leading-relaxed">✅ Mesmo zerando as pendentes, você fecha com média 7. Tá voando.</div>`;
     return `<div class="rounded-xl p-3 mb-3 bg-amber-50 text-amber-800 text-xs font-medium leading-relaxed">🎯 Pra fechar com média 7, você precisa tirar pelo menos <strong>${fmt(needed)}</strong> ${pendingCount > 1 ? 'em média nas pendentes' : 'na próxima'}.</div>`;
   }
-
-  // sem pendentes
-  if (mean !== null && mean >= 7) {
-    return `<div class="rounded-xl p-3 mb-3 bg-green-50 text-green-700 text-xs font-medium leading-relaxed">✅ Sua média está em <strong>${fmt(mean)}</strong>, acima da meta de 7,0.</div>`;
-  }
+  if (mean !== null && mean >= 7) return `<div class="rounded-xl p-3 mb-3 bg-green-50 text-green-700 text-xs font-medium leading-relaxed">✅ Sua média está em <strong>${fmt(mean)}</strong>, acima da meta de 7,0.</div>`;
   if (mean !== null && mean < 7) {
     const gap = 7 - mean;
     return `<div class="rounded-xl p-3 mb-3 bg-amber-50 text-amber-800 text-xs font-medium leading-relaxed">⚠️ Sua média está em <strong>${fmt(mean)}</strong>. Faltam <strong>${fmt(gap)}</strong> ponto(s) pra atingir 7,0. Adicione uma próxima avaliação ou recuperação pra ver quanto precisa tirar.</div>`;
@@ -319,270 +502,84 @@ function renderMeanTip(mean, needed, pendingCount) {
 
 function toggleSubject(id) { expandedId = expandedId === id ? null : id; renderShell(); }
 
-// ============ TASKS ============
-function renderTasks() {
-  const pending = tasks.filter(t => !t.completed);
-  const done = tasks.filter(t => t.completed);
-  const grouped = { atrasada: [], hoje: [], semana: [], depois: [], sempraz: [] };
-  pending.forEach(t => {
-    const d = dayDiff(t.due_date);
-    if (d === null) grouped.sempraz.push(t);
-    else if (d < 0) grouped.atrasada.push(t);
-    else if (d === 0) grouped.hoje.push(t);
-    else if (d <= 7) grouped.semana.push(t);
-    else grouped.depois.push(t);
-  });
+// ============ POINTS ============
+function renderPoints(stats) {
+  const nextReward = REWARDS.slice().sort((a, b) => a.cost - b.cost).find(r => r.cost > stats.totalPoints) || REWARDS[REWARDS.length-1];
+  const progress = Math.min(100, (stats.totalPoints / nextReward.cost) * 100);
+  const remaining = Math.max(0, nextReward.cost - stats.totalPoints);
+  const todayDone = HABITS.filter(h => stats.todayKeys.has(h.key)).length;
+  const achievements = getAchievements(stats);
 
   return `
     <div class="flex items-center justify-between mb-3">
-      <div class="text-xl font-bold text-slate-900">Minhas tarefas</div>
-      <button onclick="openTaskModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Tarefa</button>
+      <div class="text-xl font-bold text-slate-900">Meus pontos</div>
     </div>
 
-    ${tasks.length === 0 ? `
-      <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center">
-        <div class="text-4xl mb-3">📋</div>
-        <div class="text-sm font-semibold text-slate-900 mb-1">Sem tarefas</div>
-        <div class="text-xs text-slate-500 mb-4">Adicione provas, trabalhos e lembretes.</div>
-        <button onclick="openTaskModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Adicionar primeira tarefa</button>
-      </div>
-    ` : `
-      ${renderTaskGroup('Atrasadas', grouped.atrasada, 'red')}
-      ${renderTaskGroup('Hoje', grouped.hoje, 'red')}
-      ${renderTaskGroup('Esta semana', grouped.semana, 'blue')}
-      ${renderTaskGroup('Mais pra frente', grouped.depois, 'slate')}
-      ${renderTaskGroup('Sem prazo', grouped.sempraz, 'slate')}
-      ${done.length > 0 ? `
-        <div class="text-xs uppercase tracking-wide text-slate-400 font-bold mt-6 mb-2 px-1">Concluídas (${done.length})</div>
-        <div class="space-y-2">${done.map(t => renderTaskCard(t)).join('')}</div>
-      ` : ''}
-    `}
-  `;
-}
+    <div class="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-6 text-white text-center mb-5 relative overflow-hidden">
+      <div class="absolute -top-7 right-0 text-8xl opacity-15">★</div>
+      <div class="text-xs uppercase tracking-widest opacity-90 font-semibold mb-1">⭐ Total acumulado</div>
+      <div class="text-5xl font-extrabold mb-2">${stats.totalPoints}</div>
+      <div class="text-xs opacity-90 font-medium">${remaining > 0 ? `Faltam ${remaining} pts pra "${nextReward.name}"` : `Você desbloqueou todas as recompensas!`}</div>
+      <div class="h-1.5 bg-white/30 rounded-full overflow-hidden mt-3"><div class="h-full bg-white rounded-full transition-all" style="width: ${progress}%"></div></div>
+    </div>
 
-function renderTaskGroup(label, list, color) {
-  if (list.length === 0) return '';
-  return `
-    <div class="text-xs uppercase tracking-wide font-bold mt-4 mb-2 px-1 text-${color}-600">${label} (${list.length})</div>
-    <div class="space-y-2">${list.map(t => renderTaskCard(t)).join('')}</div>
-  `;
-}
-
-function renderTaskCard(t) {
-  const subject = subjects.find(s => s.id === t.subject_id);
-  const diff = dayDiff(t.due_date);
-  const urg = urgencyLabel(diff);
-  return `
-    <div class="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100 ${t.completed ? 'opacity-60' : ''}">
-      <button onclick="toggleTaskComplete('${t.id}', ${t.completed})" class="w-6 h-6 rounded-md border-2 ${t.completed ? 'bg-blue-900 border-blue-900 text-white' : 'border-slate-300'} flex-shrink-0 flex items-center justify-center text-sm">${t.completed ? '✓' : ''}</button>
-      <div class="flex-1 min-w-0">
-        <div class="text-sm font-semibold text-slate-900 truncate ${t.completed ? 'line-through' : ''}">${t.title}</div>
-        <div class="text-xs text-slate-400">${subject ? subject.emoji + ' ' + subject.name : 'Geral'}${t.due_date ? ' · ' + new Date(t.due_date).toLocaleDateString('pt-BR') : ''}</div>
+    <div class="bg-white rounded-2xl p-5 border border-slate-100 mb-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-sm font-bold text-slate-900">Hábitos de hoje</div>
+        <div class="text-xs text-slate-500 font-semibold">${todayDone} de ${HABITS.length}</div>
       </div>
-      ${!t.completed ? `<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full ${urg.tag} whitespace-nowrap">${urg.text}</span>` : ''}
-      <button onclick="deleteTask('${t.id}')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button>
+      ${HABITS.map(h => {
+        const done = stats.todayKeys.has(h.key);
+        return `
+          <div onclick="toggleHabit('${h.key}', ${h.points}, ${done})" class="flex items-center gap-3 py-2.5 border-b border-slate-100 last:border-0 cursor-pointer">
+            <div class="w-6 h-6 rounded-md border-2 ${done ? 'bg-blue-900 border-blue-900 text-white' : 'border-slate-300'} flex items-center justify-center text-sm flex-shrink-0">${done ? '✓' : ''}</div>
+            <div class="flex-1 text-sm font-medium ${done ? 'line-through text-slate-400' : 'text-slate-900'}">${h.text}</div>
+            <div class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">+${h.points}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div class="text-base font-bold text-slate-900 mb-3">Conquistas</div>
+    <div class="flex gap-2 mb-5 overflow-x-auto scroll-x pb-1">
+      ${achievements.map(a => `
+        <div class="flex-shrink-0 w-20 bg-white rounded-xl p-3 text-center border border-slate-100">
+          <div class="w-12 h-12 mx-auto mb-1.5 rounded-full flex items-center justify-center text-2xl ${a.unlocked ? 'bg-gradient-to-br from-amber-300 to-orange-500' : 'bg-slate-100 opacity-60'}">${a.unlocked ? a.icon : '🔒'}</div>
+          <div class="text-[10px] font-bold text-slate-900 leading-tight">${a.name}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="text-base font-bold text-slate-900 mb-3">Trocar pontos</div>
+    <div class="space-y-2">
+      ${REWARDS.map(r => `
+        <div class="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100">
+          <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-xl">${r.icon}</div>
+          <div class="flex-1">
+            <div class="text-sm font-semibold text-slate-900">${r.name}</div>
+            <div class="text-xs text-amber-700 font-bold">${r.cost} pts</div>
+          </div>
+          <button ${stats.totalPoints < r.cost ? 'disabled' : ''} onclick="claimReward('${r.name}', ${r.cost})" class="text-xs font-bold ${stats.totalPoints < r.cost ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-blue-900 text-white'} px-3 py-2 rounded-full">${stats.totalPoints < r.cost ? `Faltam ${r.cost - stats.totalPoints}` : 'Trocar'}</button>
+        </div>
+      `).join('')}
     </div>
   `;
 }
 
-// ============ MODALS ============
-function openSubjectModal() {
-  modalEl.classList.remove('hidden');
-  modalEl.innerHTML = `
-    <div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()">
-      <div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl">
-        <div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div>
-        <form onsubmit="handleAddSubject(event)" class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label>
-            <div class="grid grid-cols-6 gap-2" id="emojiPicker">
-              ${EMOJIS.map((e, i) => `<button type="button" data-emoji="${e}" onclick="pickEmoji('${e}')" class="aspect-square text-2xl rounded-xl border ${i === 0 ? 'border-blue-700 bg-blue-50' : 'border-slate-200'}">${e}</button>`).join('')}
-            </div>
-            <input type="hidden" id="subjectEmoji" value="${EMOJIS[0]}">
-          </div>
-          <div class="flex gap-2 pt-2">
-            <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
-            <button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-  setTimeout(() => document.getElementById('subjectName')?.focus(), 100);
-}
-
-function pickEmoji(e) {
-  document.getElementById('subjectEmoji').value = e;
-  document.querySelectorAll('#emojiPicker button').forEach(b => {
-    if (b.dataset.emoji === e) b.className = 'aspect-square text-2xl rounded-xl border border-blue-700 bg-blue-50';
-    else b.className = 'aspect-square text-2xl rounded-xl border border-slate-200';
-  });
-}
-
-async function handleAddSubject(e) {
-  e.preventDefault();
-  const name = document.getElementById('subjectName').value.trim();
-  const emoji = document.getElementById('subjectEmoji').value;
-  const { error } = await sb.from('subjects').insert({ name, emoji });
-  if (error) { alert('Erro: ' + error.message); return; }
-  closeModal();
-  await loadAndRender();
-}
-
-function openGradeModal(subjectId) {
-  modalEl.classList.remove('hidden');
-  modalEl.innerHTML = `
-    <div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()">
-      <div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl">
-        <div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div>
-        <form onsubmit="handleAddGrade(event, '${subjectId}')" class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="gradeName" required maxlength="40" placeholder="Ex: Prova 1, Trabalho..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="gradeWeight" required min="1" max="10" step="1" value="1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-            <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="gradeScore" min="0" max="10" step="0.1" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-          </div>
-          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="gradeDate" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-          <div class="text-xs text-slate-400">Deixa a nota em branco se ainda não fez. Adicione depois.</div>
-          <div class="flex gap-2 pt-2">
-            <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
-            <button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-  setTimeout(() => document.getElementById('gradeName')?.focus(), 100);
-}
-
-async function handleAddGrade(e, subjectId) {
-  e.preventDefault();
-  const evaluation_name = document.getElementById('gradeName').value.trim();
-  const weight = Number(document.getElementById('gradeWeight').value);
-  const scoreVal = document.getElementById('gradeScore').value;
-  const score = scoreVal === '' ? null : Number(scoreVal);
-  const dateVal = document.getElementById('gradeDate').value;
-  const evaluation_date = dateVal === '' ? null : dateVal;
-  const { error } = await sb.from('grades').insert({ subject_id: subjectId, evaluation_name, weight, score, evaluation_date });
-  if (error) { alert('Erro: ' + error.message); return; }
-  closeModal();
-  await loadAndRender();
-}
-
-function openTaskModal() {
-  modalEl.classList.remove('hidden');
-  const subjOpts = subjects.map(s => `<option value="${s.id}">${s.emoji} ${s.name}</option>`).join('');
-  modalEl.innerHTML = `
-    <div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()">
-      <div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl">
-        <div class="text-base font-bold text-slate-900 mb-4">Nova tarefa</div>
-        <form onsubmit="handleAddTask(event)" class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Título</label><input type="text" id="taskTitle" required maxlength="80" placeholder="Ex: Estudar pra prova de matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Matéria (opcional)</label><select id="taskSubject" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 bg-white"><option value="">Geral</option>${subjOpts}</select></div>
-          <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data de entrega (opcional)</label><input type="date" id="taskDate" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>
-          <div class="flex gap-2 pt-2">
-            <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
-            <button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-  setTimeout(() => document.getElementById('taskTitle')?.focus(), 100);
-}
-
-async function handleAddTask(e) {
-  e.preventDefault();
-  const title = document.getElementById('taskTitle').value.trim();
-  const subjVal = document.getElementById('taskSubject').value;
-  const subject_id = subjVal === '' ? null : subjVal;
-  const dateVal = document.getElementById('taskDate').value;
-  const due_date = dateVal === '' ? null : dateVal;
-  const { error } = await sb.from('tasks').insert({ title, subject_id, due_date });
-  if (error) { alert('Erro: ' + error.message); return; }
-  closeModal();
-  await loadAndRender();
-}
-
-async function toggleTaskComplete(id, current) {
-  const { error } = await sb.from('tasks').update({ completed: !current, completed_at: !current ? new Date().toISOString() : null }).eq('id', id);
-  if (error) { alert('Erro: ' + error.message); return; }
-  await loadAndRender();
-}
-
-async function deleteTask(id) {
-  if (!confirm('Apagar essa tarefa?')) return;
-  const { error } = await sb.from('tasks').delete().eq('id', id);
-  if (error) { alert('Erro: ' + error.message); return; }
-  await loadAndRender();
-}
-
-async function deleteSubject(id, name) {
-  if (!confirm(`Apagar "${name}" e todas as notas dessa matéria?`)) return;
-  const { error } = await sb.from('subjects').delete().eq('id', id);
-  if (error) { alert('Erro: ' + error.message); return; }
-  if (expandedId === id) expandedId = null;
-  await loadAndRender();
-}
-
-async function deleteGrade(id) {
-  if (!confirm('Apagar essa avaliação?')) return;
-  const { error } = await sb.from('grades').delete().eq('id', id);
-  if (error) { alert('Erro: ' + error.message); return; }
-  await loadAndRender();
-}
-
-function closeModal() { modalEl.classList.add('hidden'); modalEl.innerHTML = ''; }
-
-// ============ AUTH ============
-function setMode(newMode) { mode = newMode; renderAuth(); }
-
-function showMessage(text, type) {
-  const msg = document.getElementById('message');
-  msg.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700', 'bg-slate-50', 'text-slate-600');
-  if (type === 'error') msg.classList.add('bg-red-50', 'text-red-700');
-  else if (type === 'success') msg.classList.add('bg-green-50', 'text-green-700');
-  else msg.classList.add('bg-slate-50', 'text-slate-600');
-  msg.textContent = text;
-}
-
-function translateError(message) {
-  const map = {
-    'Invalid login credentials': 'Email ou senha incorretos.',
-    'User already registered': 'Esse email já tem conta. Tenta entrar.',
-    'Email not confirmed': 'Você precisa confirmar seu email antes de entrar.',
-    'Password should be at least 6 characters': 'A senha precisa ter no mínimo 6 caracteres.',
-  };
-  return map[message] || message;
-}
-
-async function handleAuth(e) {
-  e.preventDefault();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.classList.add('opacity-60');
-  showMessage('Aguarde...', 'info');
-  if (mode === 'signup') {
-    const { error } = await sb.auth.signUp({ email, password });
-    if (error) showMessage(translateError(error.message), 'error');
-    else showMessage('Conta criada. Agora clica em Entrar.', 'success');
+async function toggleHabit(key, points, done) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (done) {
+    const { error } = await sb.from('habit_completions').delete().eq('habit_key', key).eq('completed_date', today);
+    if (error) { alert('Erro: ' + error.message); return; }
   } else {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) showMessage(translateError(error.message), 'error');
-    else { currentUser = data.user; await loadAndRender(); return; }
+    const { error } = await sb.from('habit_completions').insert({ habit_key: key, completed_date: today, points });
+    if (error) { alert('Erro: ' + error.message); return; }
   }
-  btn.disabled = false; btn.classList.remove('opacity-60');
+  await loadAndRender();
 }
 
-async function logout() {
-  await sb.auth.signOut();
-  currentUser = null; subjects = []; tasks = []; expandedId = null; currentTab = 'home';
-  renderAuth();
+function claimReward(name, cost) {
+  alert(`"${name}" trocada! (Implementação completa em breve)`);
 }
 
-checkAuth();
-</script>
-
-</body>
-</html>
+// =========
