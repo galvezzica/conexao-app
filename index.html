@@ -398,6 +398,7 @@ async function loadAndRender() {
   setTimeout(notifyOverdue, 1500);
   setTimeout(checkBadges, 800);
   setTimeout(() => showWhatsNew(false), 1200);
+  setTimeout(() => { ensureInviteCode(); if (shouldShowDailyBox()) openDailyBox(); }, 2500);
   // Prompt suave de notificação na primeira sessão
   setTimeout(() => {
     if (notifStatus() === 'default' && !localStorage.getItem('notif_prompted')) {
@@ -501,6 +502,88 @@ function toggleTheme() {
   renderShell();
 }
 applyTheme(getTheme());
+
+
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let r = '';
+  for (let i = 0; i < 6; i++) r += chars[Math.floor(Math.random() * chars.length)];
+  return r;
+}
+async function ensureInviteCode() {
+  if (!profile || profile.invite_code) return;
+  const code = generateInviteCode();
+  await sb.from('profiles').upsert({ user_id: currentUser.id, invite_code: code }, { onConflict: 'user_id' });
+  profile.invite_code = code;
+}
+function openInviteModal() {
+  const code = profile?.invite_code || '------';
+  const url = window.location.origin + '/?invite=' + code;
+  const text = 'Olha esse app que tá ajudando eu a organizar minhas notas, tarefas e vida espiritual! Usa meu código ' + code + ' pra gente ganhar tema premium juntos: ' + url;
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-6 shadow-2xl anim-up"><div class="text-center mb-4"><div class="text-5xl mb-2">🎁</div><div class="text-lg font-bold text-slate-900">Convide um amigo</div><div class="text-xs text-slate-500 mt-1">Vocês 2 ganham 7 dias de tema premium</div></div><div class="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-5 text-center mb-4"><div class="text-xs text-slate-500 mb-1">Seu código</div><div class="text-3xl font-extrabold text-indigo-700 tracking-widest">' + code + '</div></div><button onclick="shareInvite(\'' + text.replace(/\'/g, '%27') + '\')" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 mb-2 shadow-lg shadow-green-500/30">📲 Compartilhar no WhatsApp</button><button onclick="copyInvite(\'' + url + '\')" class="w-full bg-white border-2 border-slate-200 text-slate-700 font-semibold py-3 rounded-2xl text-sm">📋 Copiar link</button><button onclick="closeModal()" class="w-full text-slate-400 text-sm py-2 mt-2">Fechar</button></div></div>';
+}
+async function shareInvite(text) {
+  const decoded = decodeURIComponent(text);
+  if (navigator.share) {
+    try { await navigator.share({ text: decoded }); return; } catch {}
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(decoded), '_blank');
+}
+async function copyInvite(url) {
+  try { await navigator.clipboard.writeText(url); toast('Link copiado!', 'success'); }
+  catch { toast('Copia manualmente: ' + url, 'info'); }
+}
+
+// CAIXINHA DIÁRIA
+const DAILY_REWARDS = [
+  { icon: '🎁', title: 'Pontos bônus!', body: '+50 pontos extras hoje', type: 'points' },
+  { icon: '✨', title: 'Versículo extra', body: '"Não tema, eu estou com você." Isaías 41:10', type: 'verse' },
+  { icon: '💪', title: 'Frase do dia', body: 'Hoje vai ser seu dia. Foco no que importa.', type: 'quote' },
+  { icon: '🔥', title: 'Streak protegido', body: 'Hoje você não perde sua sequência mesmo se esquecer', type: 'shield' },
+  { icon: '🎨', title: 'Tema desbloqueado', body: 'Você ganhou acesso a um tema novo (em breve)', type: 'theme' },
+  { icon: '⭐', title: 'Estrela rara!', body: '+100 pontos por sua consistência', type: 'star' },
+  { icon: '📖', title: 'Reflexão', body: 'Pequenos passos diários viram grandes mudanças. Hoje é mais um.', type: 'reflection' },
+  { icon: '🌅', title: 'Bom dia!', body: 'Que esse dia seja cheio de propósito e fé', type: 'morning' },
+];
+function shouldShowDailyBox() {
+  const today = new Date().toISOString().slice(0, 10);
+  return localStorage.getItem('daily_box_date') !== today;
+}
+function openDailyBox() {
+  const today = new Date().toISOString().slice(0, 10);
+  const r = DAILY_REWARDS[Math.floor(Math.random() * DAILY_REWARDS.length)];
+  localStorage.setItem('daily_box_date', today);
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-center justify-center z-50 p-4" onclick="if(event.target===this)closeModal()"><div class="bg-gradient-to-br from-amber-300 via-orange-400 to-pink-500 w-full max-w-sm rounded-3xl p-6 shadow-2xl anim-up text-center"><div class="text-7xl mb-3 float">' + r.icon + '</div><div class="text-xs uppercase tracking-widest text-white/80 font-bold mb-1">Caixinha do dia</div><div class="text-xl font-extrabold text-white mb-3">' + r.title + '</div><div class="bg-white/20 backdrop-blur rounded-2xl p-4 mb-4"><div class="text-sm text-white font-medium">' + r.body + '</div></div><button onclick="closeModal()" class="w-full bg-white text-orange-700 font-bold py-3 rounded-2xl shadow-lg">🎉 Aceitar</button></div></div>';
+}
+
+// STREAK FIRE PROTAGONISTA
+function streakFireCard(streak) {
+  if (streak < 1) return '';
+  const today = new Date().toISOString().slice(0, 10);
+  const todayKeys = new Set(allHabits.filter(h => h.completed_date === today).map(h => h.habit_key));
+  const atRisk = todayKeys.size === 0;
+  const intensity = streak >= 30 ? 'text-7xl drop-shadow-2xl' : streak >= 14 ? 'text-6xl drop-shadow-xl' : streak >= 7 ? 'text-5xl drop-shadow-lg' : 'text-5xl';
+  const bg = atRisk ? 'from-red-500 to-orange-600' : 'from-amber-400 via-orange-500 to-red-500';
+  const warning = atRisk ? '<div class="bg-white/20 backdrop-blur rounded-xl p-2 mt-3 text-xs font-bold text-white">⚠️ Marca um hábito hoje pra não perder!</div>' : '';
+  return '<div class="bg-gradient-to-br ' + bg + ' rounded-3xl p-5 text-white mb-4 anim-fade shadow-2xl shadow-orange-500/40 cursor-pointer" onclick="setTab(\'points\')"><div class="flex items-center gap-4"><div class="' + intensity + ' float">🔥</div><div class="flex-1"><div class="text-4xl font-extrabold leading-none">' + streak + '</div><div class="text-xs uppercase tracking-widest font-bold opacity-90 mt-1">dias de fogo seguidos</div></div></div>' + warning + '</div>';
+}
+
+// COMPARTILHAR CONQUISTA NO INSTAGRAM/STORY
+async function shareBadge(b) {
+  const text = 'Acabei de desbloquear a badge "' + b.name + '" ' + b.icon + ' no Conexão! ' + b.desc;
+  const url = window.location.origin;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'Conexão', text: text + ' ' + url });
+      return;
+    }
+  } catch {}
+  // Fallback: copia
+  try { await navigator.clipboard.writeText(text + ' ' + url); toast('Texto copiado pra colar onde quiser!', 'success'); }
+  catch { toast(text, 'info'); }
+}
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -665,8 +748,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.0.1';
+const APP_VERSION = '2.2';
 const CHANGELOG = [
+  { v: '2.2', emoji: '🔥', title: 'Recursos virais', items: [
+    'Convite com bônus mútuo (você + amigo ganham tema premium)',
+    'Caixinha de recompensa diária ao abrir o app',
+    'Streak fire em destaque com aviso de risco',
+    'Compartilhar badge desbloqueada no WhatsApp/Instagram',
+  ]},
   { v: '2.0', emoji: '🌙', title: 'Modo escuro chegou', items: [
     'Toggle de modo escuro no perfil',
     'Detecta automaticamente a preferência do celular',
@@ -813,7 +902,7 @@ function celebrateBadge(b) {
   toast('🎉 Nova badge: ' + b.name + '!', 'success');
   const c = document.createElement('div');
   c.style.cssText = 'position:fixed;inset:0;z-index:9999;pointer-events:none;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
-  c.innerHTML = '<div class="bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-8 text-center shadow-2xl anim-up"><div class="text-7xl mb-3">' + b.icon + '</div><div class="text-xl font-extrabold text-white">' + b.name + '</div><div class="text-sm text-white/90 mt-1">' + b.desc + '</div></div>';
+  c.innerHTML = '<div class="bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-8 text-center shadow-2xl anim-up max-w-sm mx-4"><div class="text-7xl mb-3">' + b.icon + '</div><div class="text-xl font-extrabold text-white">' + b.name + '</div><div class="text-sm text-white/90 mt-1 mb-4">' + b.desc + '</div><button onclick="shareBadge(' + JSON.stringify(b).replace(/"/g, '&quot;') + '); event.stopPropagation();" class="bg-white text-orange-700 font-bold px-5 py-2.5 rounded-full text-sm shadow-lg">📲 Compartilhar</button></div>';
   document.body.appendChild(c);
   setTimeout(() => { c.style.transition = 'opacity 0.5s'; c.style.opacity = '0'; setTimeout(() => c.remove(), 500); loadAndRender(); }, 2200);
 }
@@ -916,6 +1005,7 @@ function renderHome(stats) {
   if (shouldAskFeedback()) {
     html += '<div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">💬</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">O que tá achando do app?</div><div class="text-xs opacity-90 leading-snug mt-0.5">Manda seu feedback, leva 1 minuto</div></div><button onclick="openFeedbackModal()" class="bg-white text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Avaliar</button><button onclick="dismissFeedbackBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
   }
+  html += streakFireCard(stats.streak);
   if (shouldShowInstallBanner()) {
     const p = getPlatform();
     const platIcon = p === 'ios' ? '📱' : (p === 'android' ? '📲' : '🖥️');
@@ -1338,7 +1428,7 @@ function renderProfile() {
   html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Turma (opcional)</label><input id="pf_class" type="text" maxlength="5" value="'+escapeHtml(profile?.class_letter||'')+'" placeholder="Ex: 9A" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></form>';
-  html += '<div class="mt-4 space-y-2"><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  html += '<div class="mt-4 space-y-2"><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="openInviteModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">🎁 Convidar amigo (+ tema premium)</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
   return html;
 }
 async function saveProfile(e) {
