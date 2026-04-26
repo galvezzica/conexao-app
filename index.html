@@ -13,6 +13,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Conexão">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-192.svg">
+<link rel="apple-touch-icon" sizes="167x167" href="/icon-192.svg">
+<link rel="apple-touch-icon" sizes="152x152" href="/icon-192.svg">
+<link rel="apple-touch-icon" sizes="120x120" href="/icon-192.svg">
+<link rel="mask-icon" href="/icon-192.svg" color="#1e3a8a">
+<meta name="format-detection" content="telephone=no">
+<meta name="msapplication-TileColor" content="#1e3a8a">
+<meta name="msapplication-TileImage" content="/icon-192.svg">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -71,6 +79,56 @@ function notifyOverdue() {
   if (today_tasks.length) body += today_tasks.length + ' pra hoje.';
   new Notification('Conexão', { body: body.trim(), icon: '/icon-192.svg', tag: 'overdue' });
   localStorage.setItem('last_notif', today);
+}
+
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function getPlatform() {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  return 'desktop';
+}
+function showInstallTutorial() {
+  const p = getPlatform();
+  let steps;
+  if (p === 'ios') {
+    steps = [
+      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"><path d="M9 4l3 -3l3 3"/><path d="M12 1v14"/><path d="M5 11h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-9z"/></svg>', title: 'Toque em Compartilhar', text: 'No Safari, encontra o ícone de compartilhar (quadrado com seta pra cima) na barra de baixo.' },
+      { icon: '➕', title: 'Procure "Adicionar à Tela de Início"', text: 'Rola pra baixo no menu de compartilhamento até achar essa opção.' },
+      { icon: '✏️', title: 'Confirme o nome', text: 'Pode deixar como "Conexão" e tocar em "Adicionar" no canto superior direito.' },
+      { icon: '🎉', title: 'Pronto!', text: 'O ícone vai aparecer na sua tela inicial. Toca nele pra abrir como um app de verdade, sem barra do Safari.' }
+    ];
+  } else if (p === 'android') {
+    steps = [
+      { icon: '⋮', title: 'Toque no menu', text: 'No Chrome, abre os 3 pontinhos no canto superior direito.' },
+      { icon: '📲', title: 'Toque em "Instalar app"', text: 'Procure essa opção no menu (pode aparecer também como "Adicionar à tela inicial").' },
+      { icon: '✅', title: 'Confirme a instalação', text: 'Toque em "Instalar" no popup que aparecer.' },
+      { icon: '🎉', title: 'Pronto!', text: 'O ícone vai aparecer na sua tela inicial. Funciona igual qualquer app, abre sem barra do navegador.' }
+    ];
+  } else {
+    steps = [
+      { icon: '🖥️', title: 'No computador', text: 'Olha na barra de endereço do Chrome. Tem um ícone de instalação (parece um monitor com seta pra baixo). Clica nele e confirma "Instalar".' },
+      { icon: '📱', title: 'Recomendado: use no celular', text: 'Esse app foi feito pra ser usado no celular. Acessa esse mesmo link pelo navegador do seu celular pra instalar lá.' }
+    ];
+  }
+  modalEl.classList.remove('hidden');
+  const platLabel = p === 'ios' ? 'iPhone / iPad' : (p === 'android' ? 'Android' : 'Computador');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="flex items-center justify-between mb-1"><div class="text-base font-bold text-slate-900">Como instalar no '+platLabel+'</div><button onclick="closeModal()" class="text-slate-400 text-xl leading-none">×</button></div><div class="text-xs text-slate-500 mb-5">Em '+steps.length+' passos rápidos:</div><div class="space-y-3 mb-4">'+steps.map((s, i) => '<div class="flex gap-3 bg-slate-50 rounded-xl p-3"><div class="w-9 h-9 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">'+(i+1)+'</div><div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="text-xl">'+s.icon+'</span><span class="text-sm font-bold text-slate-900">'+s.title+'</span></div><div class="text-xs text-slate-600 leading-relaxed">'+s.text+'</div></div></div>').join('')+'</div>'+(p === 'android' && deferredInstall ? '<button onclick="installApp(); closeModal();" class="w-full bg-blue-900 text-white font-bold py-3 rounded-xl text-sm">📲 Instalar agora</button>' : '<button onclick="closeModal()" class="w-full bg-blue-900 text-white font-bold py-3 rounded-xl text-sm">Entendi</button>')+'</div></div>';
+}
+function dismissInstallBanner() {
+  localStorage.setItem('install_dismissed', Date.now().toString());
+  renderShell();
+}
+function shouldShowInstallBanner() {
+  if (isStandalone()) return false;
+  const p = getPlatform();
+  if (p === 'desktop') return false;
+  const dismissed = localStorage.getItem('install_dismissed');
+  if (dismissed && (Date.now() - Number(dismissed)) < 7 * 86400000) return false;
+  return true;
 }
 
 async function installApp() {
@@ -354,6 +412,11 @@ function renderHome(stats) {
   const isFirst = !subjects.length && !tasks.length && !allHabits.length;
   const v = getDailyVerse();
   let html = '';
+  if (shouldShowInstallBanner()) {
+    const p = getPlatform();
+    const platIcon = p === 'ios' ? '📱' : '📲';
+    html += '<div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">'+platIcon+'</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Instale o Conexão como app</div><div class="text-xs opacity-90 leading-snug mt-0.5">Acesso mais rápido e notificações no '+(p==='ios'?'iPhone':'Android')+'</div></div><button onclick="showInstallTutorial()" class="bg-white text-blue-900 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Ver como</button><button onclick="dismissInstallBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
+  }
   if (isFirst) {
     html += '<div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 mb-4 anim-fade"><div class="text-2xl mb-2">👋</div><div class="text-base font-bold text-slate-900 mb-2">Bem-vindo ao Conexão!</div><div class="text-sm text-slate-600 leading-relaxed mb-4">Aqui você organiza sua vida escolar e espiritual num lugar só. Por onde quer começar?</div><div class="space-y-2"><button onclick="setTab(\'grades\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-lg">📊</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Cadastra suas notas</div><div class="text-xs text-slate-500">App calcula a média e diz quanto falta pra passar</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="setTab(\'tasks\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg">📚</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Adiciona tarefas e provas</div><div class="text-xs text-slate-500">Organiza seu bimestre por urgência</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="openTour(0)" class="w-full bg-blue-900 text-white rounded-xl p-3 text-sm font-bold mt-2">Ver tour completo (1 minuto)</button></div></div>';
   }
@@ -551,7 +614,7 @@ function renderProfile() {
   html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div>';
   html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<button type="submit" class="w-full bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Salvar</button></form>';
-  html += '<div class="mt-4 space-y-2"><button onclick="installApp()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar como app</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  html += '<div class="mt-4 space-y-2"><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
   return html;
 }
 async function saveProfile(e) {
