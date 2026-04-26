@@ -358,6 +358,13 @@ async function loadAndRender() {
   setTimeout(notifyOverdue, 1500);
   setTimeout(checkBadges, 800);
   setTimeout(() => showWhatsNew(false), 1200);
+  // Prompt suave de notificação na primeira sessão
+  setTimeout(() => {
+    if (notifStatus() === 'default' && !localStorage.getItem('notif_prompted')) {
+      localStorage.setItem('notif_prompted', '1');
+      if (confirm('Quer receber lembretes diários de hábitos, tarefas e versículo de bom dia? (você pode mudar isso depois)')) askNotifPerm();
+    }
+  }, 8000);
 }
 
 function calcMean(grades, period) {
@@ -432,6 +439,23 @@ function getDailyVerse() {
   const start = new Date(d.getFullYear(), 0, 0);
   const day = Math.floor((d - start) / 86400000);
   return VERSES[day % VERSES.length];
+}
+
+
+function notifStatus() {
+  if (!('Notification' in window)) return 'unsupported';
+  return Notification.permission;
+}
+function shouldAskNotif() {
+  const status = notifStatus();
+  if (status === 'granted' || status === 'unsupported') return false;
+  const dismissed = localStorage.getItem('notif_banner_dismissed');
+  if (dismissed && (Date.now() - Number(dismissed)) < 3 * 86400000) return false;
+  return true;
+}
+function dismissNotifBanner() {
+  localStorage.setItem('notif_banner_dismissed', Date.now().toString());
+  renderShell();
 }
 
 function profileCompleteness() {
@@ -761,6 +785,14 @@ function renderHome(stats) {
   const v = getDailyVerse();
   const pc = profileCompleteness();
   let html = '';
+  if (shouldAskNotif()) {
+    const denied = notifStatus() === 'denied';
+    if (denied) {
+      html += '<div class="bg-gradient-to-r from-red-500 to-rose-600 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">🔕</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Notificações bloqueadas</div><div class="text-xs opacity-90 leading-snug mt-0.5">Você não vai receber lembretes. Libera nas configurações do navegador.</div></div><button onclick="dismissNotifBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
+    } else {
+      html += '<div class="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">🔔</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Ative as notificações</div><div class="text-xs opacity-90 leading-snug mt-0.5">Lembretes de água, lição, tarefas e bom dia inspiracional</div></div><button onclick="askNotifPerm()" class="bg-white text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Ativar</button><button onclick="dismissNotifBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
+    }
+  }
   if (pc.pct < 100) {
     html += '<div class="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-4 text-white mb-4 anim-fade"><div class="flex items-center gap-3 mb-2"><div class="text-2xl">👤</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Complete seu perfil ('+pc.pct+'%)</div><div class="text-xs opacity-90 leading-snug">Falta: '+pc.missing.join(', ')+'</div></div><button onclick="setTab(\'profile\')" class="bg-white text-orange-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Completar</button></div><div class="h-1.5 bg-white/30 rounded-full overflow-hidden"><div class="h-full bg-white rounded-full transition-all" style="width:'+pc.pct+'%"></div></div></div>';
   }
