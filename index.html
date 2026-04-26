@@ -22,6 +22,8 @@
 <meta name="msapplication-TileColor" content="#1e3a8a">
 <meta name="msapplication-TileImage" content="/icon-192.svg">
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { -webkit-tap-highlight-color: transparent; }
@@ -451,20 +453,56 @@ async function compressImage(file, maxSize = 256) {
     reader.readAsDataURL(file);
   });
 }
-async function uploadAvatar(e) {
+let _cropper = null;
+function uploadAvatar(e) {
   const file = e.target.files[0];
   if (!file) return;
   if (!file.type.startsWith('image/')) { toast('Selecione uma imagem.', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = () => openCropModal(reader.result);
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function openCropModal(src) {
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-center justify-center z-50 p-4"><div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-3">Ajustar foto</div><div class="text-xs text-slate-500 mb-3">Arraste pra mover. Use 2 dedos pra dar zoom (no celular) ou os botões abaixo.</div><div class="bg-slate-100 rounded-xl overflow-hidden mb-3" style="height:280px;"><img id="cropImg" src="' + src + '" style="max-width:100%; display:block;"></div><div class="flex justify-center gap-2 mb-4"><button type="button" onclick="cropZoom(-0.1)" class="w-10 h-10 bg-slate-100 rounded-full text-lg font-bold">-</button><button type="button" onclick="cropZoom(0.1)" class="w-10 h-10 bg-slate-100 rounded-full text-lg font-bold">+</button><button type="button" onclick="cropRotate(-90)" class="w-10 h-10 bg-slate-100 rounded-full text-lg">↺</button><button type="button" onclick="cropRotate(90)" class="w-10 h-10 bg-slate-100 rounded-full text-lg">↻</button></div><div class="flex gap-2"><button type="button" onclick="closeCrop()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="button" onclick="confirmCrop()" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Salvar foto</button></div></div></div>';
+  setTimeout(() => {
+    const img = document.getElementById('cropImg');
+    _cropper = new Cropper(img, {
+      aspectRatio: 1,
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 0.9,
+      restore: false,
+      guides: true,
+      center: true,
+      highlight: false,
+      cropBoxMovable: false,
+      cropBoxResizable: false,
+      toggleDragModeOnDblclick: false,
+      background: false,
+    });
+  }, 100);
+}
+function cropZoom(d) { if (_cropper) _cropper.zoom(d); }
+function cropRotate(d) { if (_cropper) _cropper.rotate(d); }
+function closeCrop() {
+  if (_cropper) { _cropper.destroy(); _cropper = null; }
+  closeModal();
+}
+async function confirmCrop() {
+  if (!_cropper) return;
   toast('Enviando foto...', 'info');
   try {
-    const blob = await compressImage(file, 256);
+    const canvas = _cropper.getCroppedCanvas({ width: 256, height: 256, imageSmoothingQuality: 'high' });
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
     const path = currentUser.id + '/avatar.jpg';
     const { error: upErr } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
     if (upErr) throw upErr;
     const { data } = sb.storage.from('avatars').getPublicUrl(path);
-    const url = data.publicUrl;
-    const { error } = await sb.from('profiles').upsert({ user_id: currentUser.id, avatar_url: url, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    const { error } = await sb.from('profiles').upsert({ user_id: currentUser.id, avatar_url: data.publicUrl, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) throw error;
+    closeCrop();
     toast('Foto atualizada!', 'success');
     await loadAndRender();
   } catch (err) {
