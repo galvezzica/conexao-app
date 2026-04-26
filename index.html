@@ -639,6 +639,9 @@ function renderHome(stats) {
   if (pc.pct < 100) {
     html += '<div class="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-4 text-white mb-4 anim-fade"><div class="flex items-center gap-3 mb-2"><div class="text-2xl">👤</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Complete seu perfil ('+pc.pct+'%)</div><div class="text-xs opacity-90 leading-snug">Falta: '+pc.missing.join(', ')+'</div></div><button onclick="setTab(\'profile\')" class="bg-white text-orange-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Completar</button></div><div class="h-1.5 bg-white/30 rounded-full overflow-hidden"><div class="h-full bg-white rounded-full transition-all" style="width:'+pc.pct+'%"></div></div></div>';
   }
+  if (shouldAskFeedback()) {
+    html += '<div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">💬</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">O que tá achando do app?</div><div class="text-xs opacity-90 leading-snug mt-0.5">Manda seu feedback, leva 1 minuto</div></div><button onclick="openFeedbackModal()" class="bg-white text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Avaliar</button><button onclick="dismissFeedbackBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
+  }
   if (shouldShowInstallBanner()) {
     const p = getPlatform();
     const platIcon = p === 'ios' ? '📱' : (p === 'android' ? '📲' : '🖥️');
@@ -873,6 +876,66 @@ function renderPrayersList() {
   if (requests.length) html += '<div class="text-xs uppercase tracking-wide font-bold text-blue-700 mt-2 mb-2 px-1">🙏 Pedidos (' + requests.length + ')</div><div class="space-y-3">' + requests.map(p => renderPrayerCard(p)).join('') + '</div>';
   return html;
 }
+
+function openFeedbackModal() {
+  let stars = '';
+  for (let n = 1; n <= 5; n++) {
+    stars += '<button type="button" onclick="pickRating(' + n + ')" data-r="' + n + '" class="hover:scale-110 transition opacity-30">⭐</button>';
+  }
+  const types = [
+    { k: 'bug', i: '🐛', l: 'Bug / Erro' },
+    { k: 'suggestion', i: '💡', l: 'Sugestão' },
+    { k: 'praise', i: '❤️', l: 'Elogio' },
+    { k: 'other', i: '✏️', l: 'Outro' },
+  ];
+  let typesHtml = '';
+  for (const t of types) {
+    typesHtml += '<button type="button" data-t="' + t.k + '" onclick="pickFbType(\'' + t.k + '\')" class="p-3 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-700 flex items-center justify-center gap-2 hover:border-blue-700"><span>' + t.i + '</span><span>' + t.l + '</span></button>';
+  }
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-1">Manda seu feedback</div><div class="text-xs text-slate-500 mb-4">Toda crítica, sugestão ou bug que você encontrar nos ajuda a melhorar.</div><form onsubmit="handleFeedback(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Como você avalia o app?</label><div class="flex gap-1 justify-center text-3xl py-2" id="ratingStars">' + stars + '</div><input type="hidden" id="fbRating" value=""></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Tipo</label><div class="grid grid-cols-2 gap-2" id="fbTypeGrid">' + typesHtml + '</div><input type="hidden" id="fbType" value="suggestion"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Sua mensagem</label><textarea id="fbMessage" required minlength="3" maxlength="1000" rows="5" placeholder="Conta o que aconteceu, o que sugere, ou o que achou..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 resize-none"></textarea></div><div class="text-xs text-slate-400 leading-relaxed">A gente lê todo feedback. Sua mensagem chega junto com a versão do app e seu navegador.</div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Enviar</button></div></form></div></div>';
+  setTimeout(() => pickFbType('suggestion'), 50);
+}
+function pickRating(n) {
+  document.getElementById('fbRating').value = n;
+  document.querySelectorAll('#ratingStars button').forEach(b => {
+    b.classList.toggle('opacity-30', Number(b.dataset.r) > n);
+  });
+}
+function pickFbType(t) {
+  document.getElementById('fbType').value = t;
+  document.querySelectorAll('#fbTypeGrid button').forEach(b => {
+    if (b.dataset.t === t) b.className = 'p-3 rounded-xl border-2 border-blue-700 bg-blue-50 text-sm font-semibold text-blue-900 flex items-center justify-center gap-2';
+    else b.className = 'p-3 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-700 flex items-center justify-center gap-2 hover:border-blue-700';
+  });
+}
+async function handleFeedback(e) {
+  e.preventDefault();
+  const ratingVal = document.getElementById('fbRating').value;
+  const data = {
+    rating: ratingVal === '' ? null : Number(ratingVal),
+    type: document.getElementById('fbType').value,
+    message: document.getElementById('fbMessage').value.trim(),
+    user_agent: navigator.userAgent.slice(0, 200),
+    app_version: 'v1.4',
+  };
+  const { error } = await sb.from('feedback').insert(data);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal();
+  toast('Obrigado pelo feedback! 💜', 'success');
+  localStorage.setItem('feedback_sent', '1');
+}
+function shouldAskFeedback() {
+  if (localStorage.getItem('feedback_sent')) return false;
+  if (localStorage.getItem('feedback_dismissed')) return false;
+  const dates = new Set(allHabits.map(h => h.completed_date));
+  return dates.size >= 3;
+}
+function dismissFeedbackBanner() {
+  localStorage.setItem('feedback_dismissed', Date.now().toString());
+  renderShell();
+}
+
 function openFeedPostModal() {
   modalEl.classList.remove('hidden');
   modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Compartilhar com a comunidade</div><form onsubmit="handleFeedPost(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Reflexão ou conquista</label><textarea id="feedContent" required minlength="3" maxlength="280" rows="4" placeholder="Conta o que você quer compartilhar..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 resize-none"></textarea></div><div class="text-xs text-slate-400">Posts ficam visíveis pra toda comunidade adolescente adventista.</div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Postar</button></div></form></div></div>';
@@ -898,7 +961,7 @@ function renderProfile() {
   html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div>';
   html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<button type="submit" class="w-full bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Salvar</button></form>';
-  html += '<div class="mt-4 space-y-2"><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  html += '<div class="mt-4 space-y-2"><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
   return html;
 }
 async function saveProfile(e) {
