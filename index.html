@@ -411,8 +411,8 @@ async function loadAndRender() {
 
 function calcMean(grades, period) {
   let g = grades || [];
-  if (period) g = g.filter(x => (x.period || 1) === period);
-  const v = g.filter(x => x.score !== null && x.score !== undefined);
+  if (period) g = g.filter(x => Number(x.period || 1) === Number(period));
+  const v = g.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
   if (!v.length) return null;
   const t = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
   const w = v.reduce((s, x) => s + Number(x.weight), 0);
@@ -420,8 +420,8 @@ function calcMean(grades, period) {
 }
 function calcNeeded(grades, period, target = 7) {
   let g = grades || [];
-  if (period) g = g.filter(x => (x.period || 1) === period);
-  const v = g.filter(x => x.score !== null && x.score !== undefined);
+  if (period) g = g.filter(x => Number(x.period || 1) === Number(period));
+  const v = g.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
   const p = g.filter(x => x.score === null || x.score === undefined);
   if (!p.length) return null;
   const cs = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
