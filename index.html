@@ -21,6 +21,9 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="msapplication-TileColor" content="#1e3a8a">
 <meta name="msapplication-TileImage" content="/icon-192.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -28,7 +31,7 @@
 <style>
   * { -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
   html, body { height: 100%; }
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
+  body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
   input:focus, select:focus, textarea:focus { outline: none; }
   .modal-bg { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .scroll-x::-webkit-scrollbar { display: none; }
@@ -309,6 +312,7 @@ let myReactions = new Set(), reactionCounts = {}, expandedId = null;
 let profile = null, currentBim = 1;
 let badges = [], feedPosts = [], feedReactions = [], myFeedReactions = new Set(), feedReactionCounts = {}, communityTab = 'feed';
 let friendships = [], schoolMates = [], friendsTab = 'discover';
+let notifications = [];
 
 async function checkAuth() {
   const { data: { user } } = await sb.auth.getUser();
@@ -333,13 +337,15 @@ async function loadAndRender() {
   feedReactionCounts = {};
   (fr.data || []).forEach(r => { const k = r.post_id+':'+r.reaction_type; feedReactionCounts[k] = (feedReactionCounts[k]||0)+1; });
   myFeedReactions = new Set((mfr.data || []).map(r => r.post_id+':'+r.reaction_type));
-  // Carregar amizades + colegas de escola
-  const [fs, sm] = await Promise.all([
+  // Carregar amizades + colegas + notifications
+  const [fs, sm, nt] = await Promise.all([
     sb.from('friendships').select('*'),
     profile?.school ? sb.from('profiles').select('*').neq('user_id', currentUser.id) : Promise.resolve({ data: [] }),
+    sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(50),
   ]);
   friendships = fs.data || [];
   schoolMates = sm.data || [];
+  notifications = nt.data || [];
   subjects = s.data || []; tasks = t.data || []; prayers = p.data || [];
   myReactions = new Set((mr.data || []).map(r => r.prayer_id + ':' + r.reaction_type));
   allHabits = h.data || [];
@@ -441,6 +447,42 @@ function getDailyVerse() {
   return VERSES[day % VERSES.length];
 }
 
+
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 6) return 'Boa madrugada';
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+function getUnreadNotifs() { return notifications.filter(n => !n.read).length; }
+async function markNotifsRead() {
+  const unread = notifications.filter(n => !n.read);
+  if (!unread.length) return;
+  await sb.from('notifications').update({ read: true }).in('id', unread.map(n => n.id));
+}
+function notifIcon(type) {
+  return type === 'prayer_reaction' ? '🙏' : type === 'feed_reaction' ? '✨' : type === 'friend_request' ? '👋' : type === 'friend_accepted' ? '🎉' : '🔔';
+}
+function renderNotifications() {
+  let html = '<div class="flex items-center justify-between mb-4"><button onclick="setTab(\'home\')" class="text-sm text-slate-500">← Voltar</button><div class="text-xl font-bold text-slate-900">Notificações</div><div></div></div>';
+  if (!notifications.length) {
+    html += '<div class="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center"><div class="text-5xl mb-3">🔔</div><div class="text-base font-bold text-slate-900 mb-1">Tudo em silêncio por aqui</div><div class="text-sm text-slate-500">Quando alguém reagir nas suas postagens ou te pedir amizade, aparece aqui.</div></div>';
+    return html;
+  }
+  html += '<div class="space-y-2">';
+  for (const n of notifications) {
+    html += '<div class="bg-white rounded-2xl p-4 border border-slate-100 ' + (n.read ? 'opacity-60' : '') + ' flex gap-3 items-start"><div class="text-2xl flex-shrink-0">' + notifIcon(n.type) + '</div><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-slate-900 leading-relaxed">' + escapeHtml(n.message) + '</div><div class="text-xs text-slate-400 mt-1">' + relTime(n.created_at) + '</div></div>' + (!n.read ? '<div class="w-2 h-2 bg-indigo-600 rounded-full flex-shrink-0 mt-2"></div>' : '') + '<button onclick="event.stopPropagation(); deleteNotif(\'' + n.id + '\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7 flex-shrink-0">×</button></div>';
+  }
+  html += '</div>';
+  setTimeout(markNotifsRead, 1000);
+  return html;
+}
+async function deleteNotif(id) {
+  await sb.from('notifications').delete().eq('id', id);
+  await loadAndRender();
+}
 
 function notifStatus() {
   if (!('Notification' in window)) return 'unsupported';
@@ -570,8 +612,18 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.9';
 const CHANGELOG = [
+  { v: '1.9', emoji: '🔔', title: 'Notificações in-app + visual mais polido', items: [
+    'Sino de notificações no header com contador',
+    'Aviso quando alguém reage no seu post',
+    'Aviso quando alguém te adiciona como amigo',
+    'Tipografia Plus Jakarta Sans (mais moderna)',
+    'Saudação dinâmica (Bom dia / Boa tarde / Boa noite)',
+    'Foto de perfil aparece nos posts e mural',
+    'Lembretes diários: cama, água, lição, dentes',
+    'Bom dia inspiracional com versículo + tarefas do dia',
+  ]},
   { v: '1.7', emoji: '🎨', title: 'Cara nova', items: [
     'Bottom nav flutuante com efeito glass',
     'Gradientes coloridos nos botões e heroes',
@@ -692,6 +744,7 @@ async function checkBadges() {
           metadata: { icon: b.icon, name: b.name, desc: b.desc },
           display_name: profile?.display_name || null,
           age: profile?.age || null,
+          avatar_url: profile?.avatar_url || null,
         });
         celebrateBadge(b);
       }
@@ -711,6 +764,7 @@ async function shareToFeed(post_type, content, metadata) {
     post_type, content, metadata: metadata || {},
     display_name: profile?.display_name || null,
     age: profile?.age || null,
+    avatar_url: profile?.avatar_url || null,
   });
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
   toast('Compartilhado no feed!', 'success');
@@ -769,7 +823,8 @@ function renderShell() {
   else if (currentTab === 'profile') content = renderProfile();
   else if (currentTab === 'faq') content = renderFAQ();
   else if (currentTab === 'friends') content = renderFriends();
-  app.innerHTML = '<div class="min-h-screen pb-28"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-5"><div><div class="text-xs text-slate-500 font-medium">Olá,</div><div class="text-sm font-bold text-slate-900 truncate max-w-[220px]">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="setTab(\'faq\')" title="Dúvidas" class="text-slate-400 hover:text-blue-700 px-2 py-1 text-lg">?</button><button onclick="setTab(\'profile\')" class="relative">'+avatarHtml('md')+'<div class="absolute bottom-0 right-0 w-3 h-3 '+(profileCompleteness().pct === 100 ? 'bg-green-500' : 'bg-red-500 animate-pulse')+' border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-3 left-3 right-3 z-40"><div class="max-w-md mx-auto glass rounded-3xl shadow-2xl shadow-indigo-900/10 border border-white/40 flex justify-around px-1 py-2">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div>';
+  else if (currentTab === 'notifications') content = renderNotifications();
+  app.innerHTML = '<div class="min-h-screen pb-28"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-6"><div><div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">'+getGreeting()+',</div><div class="text-xl font-extrabold text-slate-900 truncate max-w-[220px] mt-0.5">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="setTab(\'notifications\')" class="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm">🔔'+(getUnreadNotifs()>0?'<div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">'+getUnreadNotifs()+'</div>':'')+'</button><button onclick="setTab(\'faq\')" title="Dúvidas" class="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-blue-700 text-lg shadow-sm">?</button><button onclick="setTab(\'profile\')" class="relative">'+avatarHtml('md')+'<div class="absolute bottom-0 right-0 w-3 h-3 '+(profileCompleteness().pct === 100 ? 'bg-green-500' : 'bg-red-500 animate-pulse')+' border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-3 left-3 right-3 z-40"><div class="max-w-md mx-auto glass rounded-3xl shadow-2xl shadow-indigo-900/10 border border-white/40 flex justify-around px-1 py-2">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div>';
 }
 function navBtn(tab, icon, label) {
   const active = currentTab === tab;
@@ -1381,7 +1436,7 @@ async function handleAddPrayer(e) {
   const display_name = anonymous ? null : (dn || null);
   const av = document.getElementById('prayerAge').value;
   const age = av === '' ? null : Number(av);
-  const { error } = await sb.from('prayers').insert({ content, anonymous, display_name, age, prayer_type: ptype });
+  const { error } = await sb.from('prayers').insert({ content, anonymous, display_name, age, prayer_type: ptype, avatar_url: anonymous ? null : (profile?.avatar_url || null) });
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
   closeModal(); await loadAndRender(); toast('Postagem enviada!', 'success');
 }
