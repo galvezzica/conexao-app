@@ -25,6 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -816,8 +817,8 @@ function showWhatsNew(force) {
   modalEl.classList.remove('hidden');
   let items = '';
   for (const e of news) {
-    items += '<div class="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-3"><div class="flex items-center gap-2 mb-2"><span class="text-2xl">' + e.emoji + '</span><div class="flex-1"><div class="text-sm font-bold text-slate-900">' + e.title + '</div><div class="text-[10px] uppercase tracking-wide text-indigo-600 font-bold">v' + e.v + '</div></div></div><ul class="space-y-1.5">';
-    for (const it of e.items) items += '<li class="text-xs text-slate-700 leading-relaxed flex gap-2"><span class="text-indigo-500 flex-shrink-0">▸</span><span>' + it + '</span></li>';
+    items += '<div class="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/40 dark:to-violet-900/40 border border-indigo-200 dark:border-indigo-700 rounded-2xl p-4 mb-3"><div class="flex items-center gap-2 mb-2"><span class="text-2xl">' + e.emoji + '</span><div class="flex-1"><div class="text-sm font-bold text-slate-900 dark:text-white">' + e.title + '</div><div class="text-[10px] uppercase tracking-wide text-indigo-600 dark:text-indigo-300 font-bold">v' + e.v + '</div></div></div><ul class="space-y-1.5">';
+    for (const it of e.items) items += '<li class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed flex gap-2"><span class="text-indigo-500 dark:text-indigo-300 flex-shrink-0">▸</span><span>' + it + '</span></li>';
     items += '</ul></div>';
   }
   const titleText = force ? 'Histórico de novidades' : (seen ? 'Olha o que tem de novo!' : 'Bem-vindo à versão ' + APP_VERSION);
