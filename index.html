@@ -124,8 +124,6 @@ function dismissInstallBanner() {
 }
 function shouldShowInstallBanner() {
   if (isStandalone()) return false;
-  const p = getPlatform();
-  if (p === 'desktop') return false;
   const dismissed = localStorage.getItem('install_dismissed');
   if (dismissed && (Date.now() - Number(dismissed)) < 7 * 86400000) return false;
   return true;
@@ -414,8 +412,9 @@ function renderHome(stats) {
   let html = '';
   if (shouldShowInstallBanner()) {
     const p = getPlatform();
-    const platIcon = p === 'ios' ? '📱' : '📲';
-    html += '<div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">'+platIcon+'</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Instale o Conexão como app</div><div class="text-xs opacity-90 leading-snug mt-0.5">Acesso mais rápido e notificações no '+(p==='ios'?'iPhone':'Android')+'</div></div><button onclick="showInstallTutorial()" class="bg-white text-blue-900 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Ver como</button><button onclick="dismissInstallBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
+    const platIcon = p === 'ios' ? '📱' : (p === 'android' ? '📲' : '🖥️');
+    const platLabel = p === 'ios' ? 'iPhone' : (p === 'android' ? 'Android' : 'computador');
+    html += '<div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">'+platIcon+'</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Instale o Conexão como app</div><div class="text-xs opacity-90 leading-snug mt-0.5">Acesso mais rápido e notificações no '+platLabel+'</div></div><button onclick="showInstallTutorial()" class="bg-white text-blue-900 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Ver como</button><button onclick="dismissInstallBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
   }
   if (isFirst) {
     html += '<div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 mb-4 anim-fade"><div class="text-2xl mb-2">👋</div><div class="text-base font-bold text-slate-900 mb-2">Bem-vindo ao Conexão!</div><div class="text-sm text-slate-600 leading-relaxed mb-4">Aqui você organiza sua vida escolar e espiritual num lugar só. Por onde quer começar?</div><div class="space-y-2"><button onclick="setTab(\'grades\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-lg">📊</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Cadastra suas notas</div><div class="text-xs text-slate-500">App calcula a média e diz quanto falta pra passar</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="setTab(\'tasks\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg">📚</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Adiciona tarefas e provas</div><div class="text-xs text-slate-500">Organiza seu bimestre por urgência</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="openTour(0)" class="w-full bg-blue-900 text-white rounded-xl p-3 text-sm font-bold mt-2">Ver tour completo (1 minuto)</button></div></div>';
