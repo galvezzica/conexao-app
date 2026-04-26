@@ -162,6 +162,35 @@ const REWARDS = [
 ];
 const EMOJIS = ['📐','📖','🔬','✝️','🌎','🏛️','🇬🇧','🎨','🎵','🏃','💻','📚'];
 const PRAYER_COLORS = ['from-pink-400 to-pink-600','from-blue-400 to-blue-600','from-emerald-400 to-emerald-600','from-amber-400 to-amber-600','from-purple-400 to-purple-600','from-rose-400 to-rose-600','from-cyan-400 to-cyan-600','from-orange-400 to-orange-600'];
+const CHALLENGES_W = [
+  { key: 'w_streak7', icon: '🔥', title: '7 dias de fogo', desc: 'Marque 1 hábito por dia, 7 dias seguidos', metric: 'streak', target: 7, points: 100 },
+  { key: 'w_tasks5', icon: '📚', title: '5 tarefas concluídas', desc: 'Conclua 5 tarefas nesta semana', metric: 'tasks_week', target: 5, points: 80 },
+  { key: 'w_bible5', icon: '📖', title: 'Leitor fiel', desc: 'Leia a Bíblia 5 dias nesta semana', metric: 'bible_week', target: 5, points: 90 },
+];
+const CHALLENGES_M = [
+  { key: 'm_streak30', icon: '👑', title: '30 dias de fogo', desc: 'Marque hábito todo dia do mês', metric: 'streak', target: 30, points: 500 },
+  { key: 'm_habits50', icon: '⚡', title: 'Maratonista', desc: 'Complete 50 hábitos no mês', metric: 'habits_month', target: 50, points: 400 },
+  { key: 'm_badges5', icon: '🎖️', title: 'Coletor', desc: 'Desbloqueie 5 badges diferentes', metric: 'badges_count', target: 5, points: 300 },
+];
+const BADGES_DEF = [
+  { key: 'firekeeper', name: 'Firekeeper', icon: '🔥', desc: '7 dias de hábito seguidos', check: s => s.streak >= 7 },
+  { key: 'lenda', name: 'Lenda', icon: '👑', desc: '30 dias seguidos', check: s => s.streak >= 30 },
+  { key: 'erudito', name: 'Erudito', icon: '📚', desc: '30 tarefas concluídas', check: s => s.tasksDone >= 30 },
+  { key: 'leitor', name: 'Leitor Fiel', icon: '📖', desc: 'Bíblia 7 vezes', check: s => s.bibleCount >= 7 },
+  { key: 'maratonista', name: 'Maratonista', icon: '⚡', desc: '100 hábitos completados', check: s => s.totalCompletions >= 100 },
+  { key: 'decolagem', name: 'Decolagem', icon: '🚀', desc: '500 pontos acumulados', check: s => s.totalPoints >= 500 },
+  { key: 'espiritual', name: 'Espiritual', icon: '🙏', desc: '14 dias de Bíblia', check: s => s.bibleCount >= 14 },
+  { key: 'veterano', name: 'Veterano', icon: '🏅', desc: '60 dias ativos', check: s => s.activeDays >= 60 },
+  { key: 'estudioso', name: 'Estudioso', icon: '🎓', desc: 'Média geral acima de 8', check: s => s.overallMean !== null && s.overallMean >= 8 },
+  { key: 'coletor', name: 'Coletor', icon: '🎖️', desc: '5 badges diferentes', check: s => s.badgesCount >= 5 },
+];
+const REACTIONS = [
+  { key: 'clap', icon: '👏', label: 'Palmas' },
+  { key: 'fire', icon: '🔥', label: 'Fogo' },
+  { key: 'heart', icon: '❤️', label: 'Amei' },
+  { key: 'pray', icon: '🙏', label: 'Orando' },
+];
+
 
 const VERSES = [
   { ref: 'Jeremias 29:11', text: '"Porque sou eu que conheço os planos que tenho para vocês, planos de fazê-los prosperar e dar a vocês esperança e um futuro."' },
@@ -225,6 +254,7 @@ let mode = 'login', currentUser = null, currentTab = 'home';
 let subjects = [], tasks = [], prayers = [], allHabits = [];
 let myReactions = new Set(), reactionCounts = {}, expandedId = null;
 let profile = null, currentBim = 1;
+let badges = [], feedPosts = [], feedReactions = [], myFeedReactions = new Set(), feedReactionCounts = {}, communityTab = 'feed';
 
 async function checkAuth() {
   const { data: { user } } = await sb.auth.getUser();
@@ -232,7 +262,7 @@ async function checkAuth() {
 }
 
 async function loadAndRender() {
-  const [s, t, p, mr, h, ar, pf] = await Promise.all([
+  const [s, t, p, mr, h, ar, pf, bg, fp, fr, mfr] = await Promise.all([
     sb.from('subjects').select('*, grades(*)').order('created_at'),
     sb.from('tasks').select('*').order('due_date', { ascending: true }),
     sb.from('prayers').select('*').order('created_at', { ascending: false }).limit(50),
@@ -240,7 +270,15 @@ async function loadAndRender() {
     sb.from('habit_completions').select('*').order('completed_date', { ascending: false }),
     sb.from('prayer_reactions').select('prayer_id, reaction_type'),
     sb.from('profiles').select('*').eq('user_id', currentUser.id).maybeSingle(),
+    sb.from('user_badges').select('*').eq('user_id', currentUser.id),
+    sb.from('feed_posts').select('*').order('created_at', { ascending: false }).limit(50),
+    sb.from('feed_reactions').select('post_id, reaction_type'),
+    sb.from('feed_reactions').select('post_id, reaction_type').eq('user_id', currentUser.id),
   ]);
+  badges = bg.data || []; feedPosts = fp.data || [];
+  feedReactionCounts = {};
+  (fr.data || []).forEach(r => { const k = r.post_id+':'+r.reaction_type; feedReactionCounts[k] = (feedReactionCounts[k]||0)+1; });
+  myFeedReactions = new Set((mfr.data || []).map(r => r.post_id+':'+r.reaction_type));
   subjects = s.data || []; tasks = t.data || []; prayers = p.data || [];
   myReactions = new Set((mr.data || []).map(r => r.prayer_id + ':' + r.reaction_type));
   allHabits = h.data || [];
@@ -257,6 +295,7 @@ async function loadAndRender() {
     setTimeout(() => openTour(0), 600);
   }
   setTimeout(notifyOverdue, 1500);
+  setTimeout(checkBadges, 800);
 }
 
 function calcMean(grades, period) {
@@ -359,17 +398,95 @@ function getStats() {
   const bibleCount = allHabits.filter(h => h.habit_key === 'bible').length;
   const lateTasks = tasks.filter(t => !t.completed && t.due_date && new Date(t.due_date) < new Date()).length;
   const pendingTasks = tasks.filter(t => !t.completed).length;
-  return { todayKeys, totalPoints, weekPoints, streak, bibleCount, lateTasks, pendingTasks, totalCompletions: allHabits.length };
+  const tasksDone = tasks.filter(t => t.completed).length;
+  const ms = subjects.map(s => calcMean(s.grades, currentBim)).filter(m => m !== null);
+  const overallMean = ms.length ? ms.reduce((a,b)=>a+b,0)/ms.length : null;
+  // Hábitos da semana atual
+  const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const monthStart = new Date(); monthStart.setHours(0,0,0,0); monthStart.setDate(1);
+  const wsStr = weekStart.toISOString().slice(0,10);
+  const msStr = monthStart.toISOString().slice(0,10);
+  const habitsMonth = allHabits.filter(h => h.completed_date >= msStr).length;
+  const bibleWeek = allHabits.filter(h => h.completed_date >= wsStr && h.habit_key === 'bible').length;
+  const tasksWeek = tasks.filter(t => t.completed && t.completed_at && t.completed_at >= weekStart.toISOString()).length;
+  const activeDays = new Set(allHabits.map(h => h.completed_date)).size;
+  return { todayKeys, totalPoints, weekPoints, streak, bibleCount, lateTasks, pendingTasks, totalCompletions: allHabits.length, tasksDone, overallMean, habitsMonth, bibleWeek, tasksWeek, activeDays, badgesCount: badges.length };
 }
-function getAchievements(s) {
-  return [
-    { name: '7 dias seguidos', icon: '🏆', unlocked: s.streak >= 7 },
-    { name: 'Leitor fiel', icon: '📖', unlocked: s.bibleCount >= 7 },
-    { name: 'Sem atrasos', icon: '⚡', unlocked: s.lateTasks === 0 && tasks.length > 0 },
-    { name: '30 dias', icon: '🔥', unlocked: s.streak >= 30 },
-    { name: 'Maratonista', icon: '🏃', unlocked: s.totalCompletions >= 100 },
-  ];
+function getAchievements(s) { return BADGES_DEF.map(b => ({ ...b, unlocked: badges.some(x => x.badge_key === b.key) })); }
+function challengeProgress(c, stats) {
+  const m = c.metric;
+  if (m === 'streak') return Math.min(stats.streak, c.target);
+  if (m === 'tasks_week') return Math.min(stats.tasksWeek, c.target);
+  if (m === 'bible_week') return Math.min(stats.bibleWeek, c.target);
+  if (m === 'habits_month') return Math.min(stats.habitsMonth, c.target);
+  if (m === 'badges_count') return Math.min(stats.badgesCount, c.target);
+  return 0;
 }
+async function checkBadges() {
+  const stats = getStats();
+  const earned = new Set(badges.map(b => b.badge_key));
+  for (const b of BADGES_DEF) {
+    if (earned.has(b.key)) continue;
+    if (b.check(stats)) {
+      const { error } = await sb.from('user_badges').insert({ badge_key: b.key, badge_name: b.name, badge_icon: b.icon });
+      if (!error) {
+        // Cria post automático
+        await sb.from('feed_posts').insert({
+          post_type: 'badge',
+          content: 'Desbloqueei a badge "' + b.name + '"!',
+          metadata: { icon: b.icon, name: b.name, desc: b.desc },
+          display_name: profile?.display_name || null,
+          age: profile?.age || null,
+        });
+        celebrateBadge(b);
+      }
+    }
+  }
+}
+function celebrateBadge(b) {
+  toast('🎉 Nova badge: ' + b.name + '!', 'success');
+  const c = document.createElement('div');
+  c.style.cssText = 'position:fixed;inset:0;z-index:9999;pointer-events:none;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s';
+  c.innerHTML = '<div class="bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl p-8 text-center shadow-2xl anim-up"><div class="text-7xl mb-3">' + b.icon + '</div><div class="text-xl font-extrabold text-white">' + b.name + '</div><div class="text-sm text-white/90 mt-1">' + b.desc + '</div></div>';
+  document.body.appendChild(c);
+  setTimeout(() => { c.style.transition = 'opacity 0.5s'; c.style.opacity = '0'; setTimeout(() => c.remove(), 500); loadAndRender(); }, 2200);
+}
+async function shareToFeed(post_type, content, metadata) {
+  const { error } = await sb.from('feed_posts').insert({
+    post_type, content, metadata: metadata || {},
+    display_name: profile?.display_name || null,
+    age: profile?.age || null,
+  });
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('Compartilhado no feed!', 'success');
+  await loadAndRender();
+}
+async function reactToPost(postId, type) {
+  const k = postId + ':' + type;
+  if (myFeedReactions.has(k)) {
+    await sb.from('feed_reactions').delete().eq('post_id', postId).eq('user_id', currentUser.id).eq('reaction_type', type);
+  } else {
+    await sb.from('feed_reactions').insert({ post_id: postId, reaction_type: type });
+  }
+  await loadAndRender();
+}
+async function deleteFeedPost(id) {
+  if (!confirm('Apagar essa postagem?')) return;
+  await sb.from('feed_posts').delete().eq('id', id);
+  await loadAndRender();
+}
+function streakBadge(streak) {
+  if (streak < 1) return '';
+  let intensity = streak < 3 ? 'opacity-60' : streak < 7 ? '' : streak < 14 ? 'animate-pulse' : 'animate-pulse drop-shadow-lg';
+  return '<div class="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-full text-orange-700 text-xs font-bold mr-2"><span class="' + intensity + '">🔥</span><span>' + streak + 'd</span></div>';
+}
+function renderChallengeCard(c, stats) {
+  const cur = challengeProgress(c, stats);
+  const pct = Math.min(100, (cur / c.target) * 100);
+  const done = cur >= c.target;
+  return '<div class="bg-white rounded-2xl p-4 border ' + (done ? 'border-green-300 bg-green-50' : 'border-slate-100') + '"><div class="flex items-start gap-3"><div class="text-3xl flex-shrink-0">' + c.icon + '</div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-2 mb-1"><div class="text-sm font-bold text-slate-900">' + c.title + '</div>' + (done ? '<span class="text-[10px] font-bold bg-green-600 text-white px-2 py-0.5 rounded-full">✓ FEITO</span>' : '<span class="text-[10px] font-bold text-amber-700">+' + c.points + 'pts</span>') + '</div><div class="text-xs text-slate-500 mb-2 leading-relaxed">' + c.desc + '</div><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full ' + (done ? 'bg-green-500' : 'bg-blue-700') + ' rounded-full transition-all" style="width:' + pct + '%"></div></div><div class="text-xs font-bold ' + (done ? 'text-green-700' : 'text-slate-700') + '">' + cur + '/' + c.target + '</div></div></div></div></div>';
+}
+
 function smartMessage(overall, subjs) {
   if (overall === null) return 'Cadastra suas matérias e notas pra começar.';
   const fail = subjs.filter(s => calcMean(s.grades) !== null && calcMean(s.grades) < 7);
@@ -393,10 +510,10 @@ function renderShell() {
   else if (currentTab === 'tasks') content = renderTasks();
   else if (currentTab === 'grades') content = renderGrades();
   else if (currentTab === 'points') content = renderPoints(stats);
-  else if (currentTab === 'prayers') content = renderPrayers();
+  else if (currentTab === 'community') content = renderCommunity();
   else if (currentTab === 'profile') content = renderProfile();
   else if (currentTab === 'faq') content = renderFAQ();
-  app.innerHTML = '<div class="min-h-screen pb-24"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-5"><div><div class="text-xs text-slate-500 font-medium">Olá,</div><div class="text-sm font-bold text-slate-900 truncate max-w-[220px]">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="setTab(\'faq\')" title="Dúvidas" class="text-slate-400 hover:text-blue-700 px-2 py-1 text-lg">?</button><button onclick="setTab(\'profile\')" class="relative"><div class="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md">'+initial+'</div><div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-40"><div class="max-w-md mx-auto flex justify-around px-1 py-2 pb-5">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('prayers','🙏','Oração')+'</div></div>';
+  app.innerHTML = '<div class="min-h-screen pb-24"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-5"><div><div class="text-xs text-slate-500 font-medium">Olá,</div><div class="text-sm font-bold text-slate-900 truncate max-w-[220px]">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="setTab(\'faq\')" title="Dúvidas" class="text-slate-400 hover:text-blue-700 px-2 py-1 text-lg">?</button><button onclick="setTab(\'profile\')" class="relative"><div class="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md">'+initial+'</div><div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-40"><div class="max-w-md mx-auto flex justify-around px-1 py-2 pb-5">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div>';
 }
 function navBtn(tab, icon, label) {
   const active = currentTab === tab;
@@ -530,8 +647,10 @@ function renderPoints(stats) {
   const rem = Math.max(0, next.cost - stats.totalPoints);
   const tDone = HABITS.filter(h => stats.todayKeys.has(h.key)).length;
   const ach = getAchievements(stats);
-  let html = '<div class="flex items-center justify-between mb-3"><div class="text-xl font-bold text-slate-900">Meus pontos</div></div>';
+  let html = '<div class="flex items-center justify-between mb-3"><div class="text-xl font-bold text-slate-900">Meus pontos</div>'+streakBadge(stats.streak)+'</div>';
   html += '<div class="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-6 text-white text-center mb-5 relative overflow-hidden"><div class="absolute -top-7 right-0 text-8xl opacity-15">★</div><div class="text-xs uppercase tracking-widest opacity-90 font-semibold mb-1">⭐ Total acumulado</div><div class="text-5xl font-extrabold mb-2">'+stats.totalPoints+'</div><div class="text-xs opacity-90 font-medium">'+(rem>0?'Faltam '+rem+' pts pra "'+next.name+'"':'Você desbloqueou todas!')+'</div><div class="h-1.5 bg-white/30 rounded-full overflow-hidden mt-3"><div class="h-full bg-white rounded-full" style="width: '+prog+'%"></div></div></div>';
+  html += '<div class="text-base font-bold text-slate-900 mb-3 flex items-center gap-2"><span>🎯</span>Desafios da semana</div><div class="space-y-2 mb-5">'+CHALLENGES_W.map(c => renderChallengeCard(c, stats)).join('')+'</div>';
+  html += '<div class="text-base font-bold text-slate-900 mb-3 flex items-center gap-2"><span>🏆</span>Desafios do mês</div><div class="space-y-2 mb-5">'+CHALLENGES_M.map(c => renderChallengeCard(c, stats)).join('')+'</div>';
   html += '<div class="bg-white rounded-2xl p-5 border border-slate-100 mb-5"><div class="flex items-center justify-between mb-3"><div class="text-sm font-bold text-slate-900">Hábitos de hoje</div><div class="text-xs text-slate-500 font-semibold">'+tDone+' de '+HABITS.length+'</div></div>';
   html += HABITS.map(h => {
     const d = stats.todayKeys.has(h.key);
@@ -599,6 +718,59 @@ async function deletePrayer(id) {
   if (!confirm('Apagar sua postagem?')) return;
   await sb.from('prayers').delete().eq('id', id);
   await loadAndRender();
+}
+
+
+function renderCommunity() {
+  let html = '<div class="flex items-center justify-between mb-3"><div class="text-xl font-bold text-slate-900">Comunidade</div><button onclick="' + (communityTab==='feed'?'openFeedPostModal()':'openPrayerModal()') + '" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ ' + (communityTab==='feed'?'Compartilhar':'Pedir/Agradecer') + '</button></div>';
+  html += '<div class="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl"><button onclick="setCommTab(\'feed\')" class="flex-1 py-2 rounded-lg text-xs font-bold ' + (communityTab==='feed'?'bg-white text-slate-900 shadow-sm':'text-slate-500') + '">🎉 Feed</button><button onclick="setCommTab(\'prayers\')" class="flex-1 py-2 rounded-lg text-xs font-bold ' + (communityTab==='prayers'?'bg-white text-slate-900 shadow-sm':'text-slate-500') + '">🙏 Mural</button></div>';
+  if (communityTab === 'feed') html += renderFeed();
+  else html += renderPrayersList();
+  return html;
+}
+function setCommTab(t) { communityTab = t; renderShell(); }
+function renderFeed() {
+  if (!feedPosts.length) return '<div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center"><div class="text-4xl mb-3">🎉</div><div class="text-sm font-semibold text-slate-900 mb-1">Sem posts ainda</div><div class="text-xs text-slate-500 mb-4">Compartilhe uma conquista ou reflexão.</div><button onclick="openFeedPostModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Primeiro post</button></div>';
+  return '<div class="space-y-3">' + feedPosts.map(p => renderFeedPost(p)).join('') + '</div>';
+}
+function renderFeedPost(p) {
+  const mine = p.user_id === currentUser.id;
+  const name = p.anonymous ? 'Anônimo' : (p.display_name || 'Pessoa');
+  const init = name[0].toUpperCase();
+  const grad = colorForId(p.id);
+  const ageStr = p.age ? ' · ' + p.age + ' anos' : '';
+  let body = '';
+  if (p.post_type === 'badge' && p.metadata) {
+    body = '<div class="flex items-center gap-3 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 mb-2"><div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-300 to-orange-500 flex items-center justify-center text-2xl">' + (p.metadata.icon||'🏆') + '</div><div><div class="text-sm font-bold text-slate-900">Badge: ' + escapeHtml(p.metadata.name||'') + '</div><div class="text-xs text-slate-600">' + escapeHtml(p.metadata.desc||'') + '</div></div></div>';
+  }
+  body += '<div class="text-sm text-slate-700 leading-relaxed mb-3">' + escapeHtml(p.content||'') + '</div>';
+  const reacts = REACTIONS.map(r => {
+    const k = p.id + ':' + r.key;
+    const c = feedReactionCounts[k] || 0;
+    const did = myFeedReactions.has(k);
+    return '<button onclick="reactToPost(\'' + p.id + '\',\'' + r.key + '\')" class="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ' + (did?'bg-blue-50 text-blue-900':'text-slate-500 hover:bg-slate-50') + '">' + r.icon + ' ' + (c||'') + '</button>';
+  }).join('');
+  return '<div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="flex items-center gap-2.5 mb-3"><div class="w-9 h-9 rounded-full bg-gradient-to-br ' + grad + ' flex items-center justify-center text-white font-bold text-xs">' + init + '</div><div class="flex-1"><div class="text-xs font-bold text-slate-900">' + escapeHtml(name) + escapeHtml(ageStr) + '</div><div class="text-[10px] text-slate-400">' + relTime(p.created_at) + '</div></div>' + (mine?'<button onclick="deleteFeedPost(\'' + p.id + '\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button>':'') + '</div>' + body + '<div class="border-t border-slate-100 pt-2.5 flex gap-1">' + reacts + '</div></div>';
+}
+function renderPrayersList() {
+  const requests = prayers.filter(p => (p.prayer_type || 'request') === 'request');
+  const grats = prayers.filter(p => p.prayer_type === 'gratitude');
+  if (!prayers.length) return '<div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center"><div class="text-4xl mb-3">🙏</div><div class="text-sm font-semibold text-slate-900 mb-1">Sem postagens ainda</div><div class="text-xs text-slate-500 mb-4">Compartilhe um pedido ou agradecimento.</div><button onclick="openPrayerModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Primeira postagem</button></div>';
+  let html = '';
+  if (grats.length) html += '<div class="text-xs uppercase tracking-wide font-bold text-emerald-700 mt-2 mb-2 px-1">🎉 Gratidões (' + grats.length + ')</div><div class="space-y-3 mb-5">' + grats.map(p => renderPrayerCard(p)).join('') + '</div>';
+  if (requests.length) html += '<div class="text-xs uppercase tracking-wide font-bold text-blue-700 mt-2 mb-2 px-1">🙏 Pedidos (' + requests.length + ')</div><div class="space-y-3">' + requests.map(p => renderPrayerCard(p)).join('') + '</div>';
+  return html;
+}
+function openFeedPostModal() {
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Compartilhar com a comunidade</div><form onsubmit="handleFeedPost(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Reflexão ou conquista</label><textarea id="feedContent" required minlength="3" maxlength="280" rows="4" placeholder="Conta o que você quer compartilhar..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 resize-none"></textarea></div><div class="text-xs text-slate-400">Posts ficam visíveis pra toda comunidade adolescente adventista.</div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Postar</button></div></form></div></div>';
+  setTimeout(() => document.getElementById('feedContent').focus(), 100);
+}
+async function handleFeedPost(e) {
+  e.preventDefault();
+  const content = document.getElementById('feedContent').value.trim();
+  await shareToFeed('reflection', content);
+  closeModal();
 }
 
 function renderProfile() {
