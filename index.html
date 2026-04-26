@@ -24,19 +24,19 @@
   @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
   .anim-up { animation: slideUp 0.25s ease; }
-  .anim-fade { animation: fadeIn 0.2s ease; }
+  .anim-fade { animation: fadeIn 0.25s ease; }
   .spinner { animation: spin 0.8s linear infinite; }
 </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
-<div id="app"><div class="min-h-screen flex items-center justify-center"><div class="text-center"><div class="inline-block w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full spinner mb-3"></div><div class="text-sm text-slate-500 font-medium">Carregando Conexão...</div></div></div></div>
+<div id="app"><div class="min-h-screen flex items-center justify-center"><div class="text-center"><div class="inline-block w-10 h-10 border-4 border-blue-200 border-t-blue-700 rounded-full spinner mb-3"></div><div class="text-sm text-slate-500 font-medium">Carregando...</div></div></div></div>
 <div id="modal" class="hidden"></div>
 <div id="toasts" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(()=>{}));
-}
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+
 const SUPABASE_URL = 'https://nnoybujcgpkmosqlxcjn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lidWpjZ3BrbW9zcWx4Y2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMzgwMzcsImV4cCI6MjA5MjcxNDAzN30.CYThoLKyG7rk2b-oKg7pEAIJ3r677PNo0tQJB8R7SF8';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -58,9 +58,68 @@ const REWARDS = [
 const EMOJIS = ['📐','📖','🔬','✝️','🌎','🏛️','🇬🇧','🎨','🎵','🏃','💻','📚'];
 const PRAYER_COLORS = ['from-pink-400 to-pink-600','from-blue-400 to-blue-600','from-emerald-400 to-emerald-600','from-amber-400 to-amber-600','from-purple-400 to-purple-600','from-rose-400 to-rose-600','from-cyan-400 to-cyan-600','from-orange-400 to-orange-600'];
 
+const VERSES = [
+  { ref: 'Jeremias 29:11', text: '"Porque sou eu que conheço os planos que tenho para vocês, planos de fazê-los prosperar e dar a vocês esperança e um futuro."' },
+  { ref: 'Filipenses 4:13', text: '"Tudo posso naquele que me fortalece."' },
+  { ref: 'Salmo 23:1', text: '"O Senhor é o meu pastor; nada me faltará."' },
+  { ref: 'Provérbios 3:5-6', text: '"Confie no Senhor de todo o seu coração e não se apoie no seu próprio entendimento. Reconheça-o em todos os seus caminhos."' },
+  { ref: 'Romanos 8:28', text: '"Sabemos que Deus age em todas as coisas para o bem daqueles que o amam."' },
+  { ref: 'Salmo 27:1', text: '"O Senhor é a minha luz e a minha salvação; de quem terei medo?"' },
+  { ref: 'Mateus 6:33', text: '"Busquem em primeiro lugar o Reino de Deus e a sua justiça, e todas essas coisas serão acrescentadas a vocês."' },
+  { ref: 'Filipenses 4:6-7', text: '"Não andem ansiosos por coisa alguma, mas em tudo, pela oração e súplicas, com ação de graças, apresentem seus pedidos a Deus."' },
+  { ref: 'Isaías 41:10', text: '"Não tema, pois estou com você; não se assuste, pois sou o seu Deus. Eu o fortalecerei e o ajudarei."' },
+  { ref: 'Salmo 119:105', text: '"A tua palavra é lâmpada que ilumina os meus passos e luz que clareia o meu caminho."' },
+  { ref: 'João 3:16', text: '"Porque Deus tanto amou o mundo que deu o seu Filho Unigênito, para que todo o que nele crer não pereça, mas tenha a vida eterna."' },
+  { ref: 'Salmo 46:1', text: '"Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade."' },
+  { ref: 'Hebreus 11:1', text: '"Ora, a fé é a certeza daquilo que esperamos e a prova das coisas que não vemos."' },
+  { ref: 'Mateus 11:28', text: '"Venham a mim, todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês."' },
+  { ref: 'Romanos 12:2', text: '"Não se amoldem ao padrão deste mundo, mas transformem-se pela renovação da sua mente."' },
+  { ref: '2 Timóteo 1:7', text: '"Pois Deus não nos deu espírito de covardia, mas de poder, de amor e de equilíbrio."' },
+  { ref: 'Salmo 37:4', text: '"Deleite-se no Senhor, e ele atenderá aos desejos do seu coração."' },
+  { ref: 'Tiago 1:5', text: '"Se algum de vocês tem falta de sabedoria, peça-a a Deus, que a todos dá livremente, de boa vontade."' },
+  { ref: 'Eclesiastes 12:1', text: '"Lembre-se do seu Criador nos dias da sua juventude!"' },
+  { ref: '1 Coríntios 10:13', text: '"Deus é fiel; ele não permitirá que vocês sejam tentados além do que possam suportar."' },
+  { ref: 'Provérbios 16:3', text: '"Consagre ao Senhor tudo o que você faz, e os seus planos serão bem-sucedidos."' },
+  { ref: 'Josué 1:9', text: '"Seja forte e corajoso! Não se apavore nem desanime, pois o Senhor, o seu Deus, estará com você por onde você andar."' },
+  { ref: 'Salmo 91:11', text: '"Porque a seus anjos dará ordens a seu respeito, para que o protejam em todos os seus caminhos."' },
+  { ref: 'Filipenses 4:8', text: '"Tudo o que é verdadeiro, tudo o que é nobre, tudo o que é correto, tudo o que é puro, em tudo isso pensem."' },
+  { ref: 'Mateus 7:7', text: '"Peçam, e lhes será dado; busquem, e encontrarão; batam, e a porta lhes será aberta."' },
+  { ref: 'Salmo 56:3', text: '"Quando estou com medo, confio em ti."' },
+  { ref: 'Romanos 15:13', text: '"Que o Deus da esperança os encha de toda alegria e paz, por sua confiança nele."' },
+  { ref: 'Provérbios 22:6', text: '"Instrua a criança segundo os objetivos que você tem para ela, e mesmo com o passar dos anos não se desviará deles."' },
+  { ref: '1 Coríntios 13:4', text: '"O amor é paciente, o amor é bondoso. Não inveja, não se vangloria, não se orgulha."' },
+  { ref: 'Salmo 139:14', text: '"Eu te louvo porque me fizeste de modo especial e admirável. Tuas obras são maravilhosas!"' },
+];
+
+const FAQS = [
+  { q: 'Como adiciono minhas notas?', a: 'Vai na aba Notas, clica em + Matéria pra cadastrar (Ex: Matemática). Toca na matéria pra abrir, clica em + Adicionar nota e preenche nome da avaliação, peso e a nota que você tirou.', cat: 'uso' },
+  { q: 'O app calcula minha média sozinho?', a: 'Sim. Assim que você cadastra as notas com peso, a média é calculada automaticamente. Aparece em cima do card da matéria e na aba Início.', cat: 'uso' },
+  { q: 'Como sei quanto preciso tirar pra passar?', a: 'Cadastra suas avaliações (mesmo as que ainda não fez, deixa a nota em branco). O app mostra o que você precisa tirar nas pendentes pra fechar com média 7.', cat: 'notas' },
+  { q: 'Como funciona o peso da nota?', a: 'Peso é o quanto a avaliação vale na média. Prova que vale 3x conta mais que trabalho que vale 1x. O app faz a média ponderada certinho. Pergunta pro seu professor o peso de cada avaliação.', cat: 'notas' },
+  { q: 'Como marco um hábito?', a: 'Vai na aba Pontos, lista de Hábitos de hoje, toca na bolinha pra marcar. Aparece um toast verde com os pontos ganhos. Cada hábito vale uma quantidade fixa de pontos.', cat: 'uso' },
+  { q: 'Pra que servem os pontos?', a: 'Pontos viram conquistas (badges como 7 dias seguidos, Leitor fiel) e dá pra trocar por recompensas dentro do app. Também é uma forma de medir sua consistência ao longo do tempo.', cat: 'pontos' },
+  { q: 'Como ganho mais pontos?', a: 'Marcando os 5 hábitos diários (até 70 pts/dia). Quanto mais consistente você é, mais pontos acumula. O sistema impede marcar o mesmo hábito 2x no mesmo dia.', cat: 'pontos' },
+  { q: 'Quem vê meus pedidos de oração?', a: 'Os pedidos do mural são públicos pra outros usuários do app (comunidade adolescente adventista). Você pode postar como anônimo se preferir não aparecer com seu nome.', cat: 'oracao' },
+  { q: 'Posso apagar um pedido depois?', a: 'Sim. Toca no X do canto superior direito do seu pedido e ele some. Quem reagiu não recebe aviso, simplesmente o pedido deixa de existir.', cat: 'oracao' },
+  { q: 'Quem vê minhas notas e tarefas?', a: 'Só você. Notas, tarefas e hábitos são privados. O app usa proteção a nível de banco de dados pra garantir que outro usuário nem por engano vê seus dados.', cat: 'privacidade' },
+  { q: 'Posso ser anônimo?', a: 'No mural de oração sim, marca a opção Anônimo. Pra usar o app você precisa de email e senha porque é com isso que ele guarda seus dados.', cat: 'privacidade' },
+  { q: 'O app é grátis?', a: 'Por enquanto sim. Tudo funciona sem cobrar nada. Sem propaganda também.', cat: 'geral' },
+  { q: 'Esqueci minha senha, e agora?', a: 'Por enquanto a recuperação de senha não tá implementada. Se isso acontecer, manda mensagem pra gente que a gente reseta manualmente. Em breve vai ter o botão Esqueci a senha.', cat: 'geral' },
+  { q: 'Funciona offline?', a: 'A tela carrega sem internet (graças ao service worker), mas pra cadastrar nota, marcar hábito ou ver pedidos novos você precisa de conexão. Sem rede, você vê o que já foi carregado.', cat: 'geral' },
+];
+
+const TOUR_STEPS = [
+  { icon: '👋', title: 'Bem-vindo ao Conexão!', text: 'Esse é seu app pra organizar a vida escolar e espiritual em um lugar só. Vou te mostrar rapidinho o que dá pra fazer aqui.' },
+  { icon: '📊', title: 'Cadastra tuas notas', text: 'Na aba Notas você lança matéria por matéria. O app calcula a média e mostra exatamente quanto você precisa tirar nas próximas avaliações pra passar.' },
+  { icon: '📚', title: 'Organiza tarefas', text: 'Na aba Tarefas você anota provas, trabalhos e lembretes. O app agrupa por urgência: Hoje, Esta semana, Mais pra frente. Não esquece mais nada.' },
+  { icon: '⭐', title: 'Ganha pontos com hábitos', text: 'Na aba Pontos você marca todo dia se dormiu cedo, leu a Bíblia, se exercitou. Cada hábito vale pontos. Acumula, ganha conquistas, troca por recompensas.' },
+  { icon: '🙏', title: 'Mural de oração', text: 'Compartilha pedido ou gratidão com outros adolescentes adventistas. A comunidade ora junto, celebra junto. Pode ser anônimo se você quiser.' },
+];
+
 let mode = 'login', currentUser = null, currentTab = 'home';
 let subjects = [], tasks = [], prayers = [], allHabits = [];
 let myReactions = new Set(), reactionCounts = {}, expandedId = null;
+let profile = null, currentBim = 1;
 
 async function checkAuth() {
   const { data: { user } } = await sb.auth.getUser();
@@ -68,36 +127,50 @@ async function checkAuth() {
 }
 
 async function loadAndRender() {
-  const [s, t, p, mr, h, ar] = await Promise.all([
+  const [s, t, p, mr, h, ar, pf] = await Promise.all([
     sb.from('subjects').select('*, grades(*)').order('created_at'),
     sb.from('tasks').select('*').order('due_date', { ascending: true }),
     sb.from('prayers').select('*').order('created_at', { ascending: false }).limit(50),
-    sb.from('prayer_reactions').select('prayer_id').eq('user_id', currentUser.id),
+    sb.from('prayer_reactions').select('prayer_id, reaction_type').eq('user_id', currentUser.id),
     sb.from('habit_completions').select('*').order('completed_date', { ascending: false }),
-    sb.from('prayer_reactions').select('prayer_id'),
+    sb.from('prayer_reactions').select('prayer_id, reaction_type'),
+    sb.from('profiles').select('*').eq('user_id', currentUser.id).maybeSingle(),
   ]);
   subjects = s.data || []; tasks = t.data || []; prayers = p.data || [];
-  myReactions = new Set((mr.data || []).map(r => r.prayer_id));
+  myReactions = new Set((mr.data || []).map(r => r.prayer_id + ':' + r.reaction_type));
   allHabits = h.data || [];
   reactionCounts = {};
-  (ar.data || []).forEach(r => { reactionCounts[r.prayer_id] = (reactionCounts[r.prayer_id] || 0) + 1; });
+  (ar.data || []).forEach(r => {
+    const k = r.prayer_id + ':' + r.reaction_type;
+    reactionCounts[k] = (reactionCounts[k] || 0) + 1;
+  });
+  profile = pf.data || null;
+  currentBim = currentBim || 1;
   renderShell();
+  // Tour: dispara na primeira vez
+  if (!localStorage.getItem('tour_done') && !subjects.length && !tasks.length && !allHabits.length) {
+    setTimeout(() => openTour(0), 600);
+  }
 }
 
-function calcMean(grades) {
-  const v = (grades || []).filter(g => g.score !== null && g.score !== undefined);
+function calcMean(grades, period) {
+  let g = grades || [];
+  if (period) g = g.filter(x => (x.period || 1) === period);
+  const v = g.filter(x => x.score !== null && x.score !== undefined);
   if (!v.length) return null;
-  const t = v.reduce((s, g) => s + Number(g.score) * Number(g.weight), 0);
-  const w = v.reduce((s, g) => s + Number(g.weight), 0);
+  const t = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
+  const w = v.reduce((s, x) => s + Number(x.weight), 0);
   return w > 0 ? t / w : null;
 }
-function calcNeeded(grades, target = 7) {
-  const v = (grades || []).filter(g => g.score !== null && g.score !== undefined);
-  const p = (grades || []).filter(g => g.score === null || g.score === undefined);
+function calcNeeded(grades, period, target = 7) {
+  let g = grades || [];
+  if (period) g = g.filter(x => (x.period || 1) === period);
+  const v = g.filter(x => x.score !== null && x.score !== undefined);
+  const p = g.filter(x => x.score === null || x.score === undefined);
   if (!p.length) return null;
-  const cs = v.reduce((s, g) => s + Number(g.score) * Number(g.weight), 0);
-  const vw = v.reduce((s, g) => s + Number(g.weight), 0);
-  const pw = p.reduce((s, g) => s + Number(g.weight), 0);
+  const cs = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
+  const vw = v.reduce((s, x) => s + Number(x.weight), 0);
+  const pw = p.reduce((s, x) => s + Number(x.weight), 0);
   return pw > 0 ? (target * (vw + pw) - cs) / pw : null;
 }
 function meanColor(m) {
@@ -137,7 +210,7 @@ function colorForId(id) {
   return PRAYER_COLORS[h];
 }
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 function toast(msg, type) {
   const t = document.createElement('div');
@@ -146,6 +219,16 @@ function toast(msg, type) {
   t.textContent = msg;
   document.getElementById('toasts').appendChild(t);
   setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2800);
+}
+function getDailyVerse() {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  const day = Math.floor((d - start) / 86400000);
+  return VERSES[day % VERSES.length];
+}
+function userName() {
+  if (profile && profile.display_name) return profile.display_name;
+  return (currentUser.email || 'Você').split('@')[0];
 }
 function getStats() {
   const today = new Date().toISOString().slice(0, 10);
@@ -181,13 +264,23 @@ function getAchievements(s) {
     { name: 'Maratonista', icon: '🏃', unlocked: s.totalCompletions >= 100 },
   ];
 }
+function smartMessage(overall, subjs) {
+  if (overall === null) return 'Cadastra suas matérias e notas pra começar.';
+  const fail = subjs.filter(s => calcMean(s.grades) !== null && calcMean(s.grades) < 7);
+  if (overall >= 9) return 'Você tá voando! Continua assim.';
+  if (overall >= 7 && !fail.length) return 'Você tá bem em todas. Mantém o ritmo.';
+  if (overall >= 7 && fail.length === 1) return 'Você tá bem! Só ' + fail[0].name + ' precisa de atenção.';
+  if (overall >= 7) return fail.length + ' matérias precisam de atenção.';
+  if (overall >= 5) return 'Atenção: várias matérias precisam de reforço.';
+  return 'Foco e oração. Você consegue subir essa média.';
+}
 
 function renderAuth() {
-  app.innerHTML = '<div class="min-h-screen flex items-center justify-center px-5 py-10"><div class="w-full max-w-md"><div class="text-center mb-8"><div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg">C</div><div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div><div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div></div><div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100"><div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl"><button onclick="setMode(\'login\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='login'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Entrar</button><button onclick="setMode(\'signup\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='signup'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Criar conta</button></div><form onsubmit="handleAuth(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div><button type="submit" id="submitBtn" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-xl">'+(mode==='login'?'Entrar':'Criar minha conta')+'</button><div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div></form></div><div class="text-center text-xs text-slate-400 mt-6">v0.5</div></div></div>';
+  app.innerHTML = '<div class="min-h-screen flex items-center justify-center px-5 py-10"><div class="w-full max-w-md"><div class="text-center mb-8"><div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg">C</div><div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div><div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div></div><div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100"><div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl"><button onclick="setMode(\'login\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='login'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Entrar</button><button onclick="setMode(\'signup\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='signup'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Criar conta</button></div><form onsubmit="handleAuth(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div><button type="submit" id="submitBtn" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 rounded-xl">'+(mode==='login'?'Entrar':'Criar minha conta')+'</button><div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div></form></div><div class="text-center text-xs text-slate-400 mt-6">v0.8</div></div></div>';
 }
 
 function renderShell() {
-  const initial = (currentUser.email || 'U')[0].toUpperCase();
+  const initial = userName()[0].toUpperCase();
   const stats = getStats();
   let content = '';
   if (currentTab === 'home') content = renderHome(stats);
@@ -195,30 +288,33 @@ function renderShell() {
   else if (currentTab === 'grades') content = renderGrades();
   else if (currentTab === 'points') content = renderPoints(stats);
   else if (currentTab === 'prayers') content = renderPrayers();
-  app.innerHTML = '<div class="min-h-screen pb-24"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-5"><div><div class="text-xs text-slate-500 font-medium">Olá,</div><div class="text-sm font-bold text-slate-900 truncate max-w-[220px]">'+escapeHtml(currentUser.email)+'</div></div><div class="flex items-center gap-2"><button onclick="logout()" class="text-xs text-slate-500 hover:text-slate-900 px-2 py-1">Sair</button><div class="relative"><div class="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md">'+initial+'</div><div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div></div></div></div>'+content+'</div></div><div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-40"><div class="max-w-md mx-auto flex justify-around px-1 py-2 pb-5">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('prayers','🙏','Oração')+'</div></div>';
+  else if (currentTab === 'profile') content = renderProfile();
+  else if (currentTab === 'faq') content = renderFAQ();
+  app.innerHTML = '<div class="min-h-screen pb-24"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-5"><div><div class="text-xs text-slate-500 font-medium">Olá,</div><div class="text-sm font-bold text-slate-900 truncate max-w-[220px]">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="setTab(\'faq\')" title="Dúvidas" class="text-slate-400 hover:text-blue-700 px-2 py-1 text-lg">?</button><button onclick="setTab(\'profile\')" class="relative"><div class="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-bold shadow-md">'+initial+'</div><div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 z-40"><div class="max-w-md mx-auto flex justify-around px-1 py-2 pb-5">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('prayers','🙏','Oração')+'</div></div>';
 }
 function navBtn(tab, icon, label) {
   const active = currentTab === tab;
   return '<button onclick="setTab(\''+tab+'\')" class="flex flex-col items-center gap-0.5 px-2 py-1 '+(active?'text-blue-900':'text-slate-400')+'"><div class="text-lg">'+icon+'</div><div class="text-[9px] font-bold uppercase tracking-wide">'+label+'</div></button>';
 }
-function setTab(t) { currentTab = t; expandedId = null; renderShell(); }
+function setTab(t) { currentTab = t; expandedId = null; renderShell(); window.scrollTo(0,0); }
 
 function renderHome(stats) {
   const upcoming = tasks.filter(t => !t.completed).slice(0, 3);
-  const subsM = subjects.map(s => ({ ...s, mean: calcMean(s.grades) })).slice(0, 4);
+  const subsM = subjects.map(s => ({ ...s, mean: calcMean(s.grades, currentBim) })).slice(0, 4);
   const isFirst = !subjects.length && !tasks.length && !allHabits.length;
+  const v = getDailyVerse();
   let html = '';
   if (isFirst) {
-    html += '<div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 mb-4 anim-fade"><div class="text-2xl mb-2">👋</div><div class="text-base font-bold text-slate-900 mb-2">Bem-vindo ao Conexão!</div><div class="text-sm text-slate-600 leading-relaxed mb-4">Aqui você organiza sua vida escolar e espiritual num lugar só. Por onde quer começar?</div><div class="space-y-2"><button onclick="setTab(\'grades\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-lg">📊</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Cadastra suas notas</div><div class="text-xs text-slate-500">App calcula a média e diz quanto falta pra passar</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="setTab(\'tasks\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg">📚</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Adiciona tarefas e provas</div><div class="text-xs text-slate-500">Organiza seu bimestre por urgência</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="setTab(\'points\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center text-lg">⭐</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Marca seus hábitos</div><div class="text-xs text-slate-500">Ganha pontos cuidando da saúde e da fé</div></div><div class="text-blue-700 text-lg">→</div></button></div></div>';
+    html += '<div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 mb-4 anim-fade"><div class="text-2xl mb-2">👋</div><div class="text-base font-bold text-slate-900 mb-2">Bem-vindo ao Conexão!</div><div class="text-sm text-slate-600 leading-relaxed mb-4">Aqui você organiza sua vida escolar e espiritual num lugar só. Por onde quer começar?</div><div class="space-y-2"><button onclick="setTab(\'grades\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-lg">📊</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Cadastra suas notas</div><div class="text-xs text-slate-500">App calcula a média e diz quanto falta pra passar</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="setTab(\'tasks\')" class="w-full bg-white hover:bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-left"><div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg">📚</div><div class="flex-1"><div class="text-sm font-bold text-slate-900">Adiciona tarefas e provas</div><div class="text-xs text-slate-500">Organiza seu bimestre por urgência</div></div><div class="text-blue-700 text-lg">→</div></button><button onclick="openTour(0)" class="w-full bg-blue-900 text-white rounded-xl p-3 text-sm font-bold mt-2">Ver tour completo (1 minuto)</button></div></div>';
   }
-  html += '<div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-4 relative overflow-hidden"><div class="absolute -top-4 -right-2 text-9xl opacity-5 font-thin">✧</div><div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">✦ Versículo do dia</div><div class="text-sm leading-relaxed font-medium mb-2">"Porque sou eu que conheço os planos que tenho para vocês, planos de fazê-los prosperar e dar a vocês esperança e um futuro."</div><div class="text-xs font-semibold opacity-85">Jeremias 29:11</div></div>';
+  html += '<div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-4 relative overflow-hidden"><div class="absolute -top-4 -right-2 text-9xl opacity-5 font-thin">✧</div><div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">✦ Versículo do dia</div><div class="text-sm leading-relaxed font-medium mb-2">'+v.text+'</div><div class="text-xs font-semibold opacity-85">'+v.ref+'</div></div>';
   html += '<div class="grid grid-cols-2 gap-3 mb-5"><div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg mb-2">⭐</div><div class="text-2xl font-extrabold text-slate-900">'+stats.weekPoints+'</div><div class="text-xs text-slate-500 font-medium mt-0.5">pontos esta semana</div></div><div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-lg mb-2">📚</div><div class="text-2xl font-extrabold text-slate-900">'+stats.pendingTasks+'</div><div class="text-xs text-slate-500 font-medium mt-0.5">tarefas pendentes</div></div></div>';
   html += '<div class="flex items-center justify-between mb-3"><div class="text-base font-bold text-slate-900">Próximas tarefas</div><button onclick="setTab(\'tasks\')" class="text-xs font-semibold text-blue-700">Ver todas →</button></div><div class="space-y-2 mb-5">';
   if (!upcoming.length) html += '<div class="bg-white border border-slate-100 rounded-2xl p-5 text-center text-sm text-slate-500">Tudo em dia!</div>';
   else html += upcoming.map(t => renderTaskMini(t)).join('');
   html += '</div>';
   if (subsM.length > 0) {
-    html += '<div class="flex items-center justify-between mb-3"><div class="text-base font-bold text-slate-900">Minhas médias</div><button onclick="setTab(\'grades\')" class="text-xs font-semibold text-blue-700">Ver tudo →</button></div><div class="space-y-2">';
+    html += '<div class="flex items-center justify-between mb-3"><div class="text-base font-bold text-slate-900">Minhas médias · '+currentBim+'º bim</div><button onclick="setTab(\'grades\')" class="text-xs font-semibold text-blue-700">Ver tudo →</button></div><div class="space-y-2">';
     html += subsM.map(s => '<div class="bg-white rounded-xl px-3 py-2.5 flex items-center justify-between border border-slate-100"><div class="flex items-center gap-2.5"><span class="text-base">'+(s.emoji || '📚')+'</span><span class="text-sm font-semibold text-slate-900">'+escapeHtml(s.name)+'</span></div><div class="text-base font-extrabold '+meanColor(s.mean).text+'">'+fmt(s.mean)+'</div></div>').join('');
     html += '</div>';
   }
@@ -258,39 +354,47 @@ function renderTaskGroup(label, list, color) {
 function renderTaskCard(t) {
   const sub = subjects.find(s => s.id === t.subject_id);
   const u = urgencyLabel(dayDiff(t.due_date));
-  return '<div class="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100 '+(t.completed?'opacity-60':'')+'"><button onclick="toggleTask(\''+t.id+'\','+t.completed+')" class="w-6 h-6 rounded-md border-2 '+(t.completed?'bg-blue-900 border-blue-900 text-white':'border-slate-300')+' flex items-center justify-center text-sm flex-shrink-0">'+(t.completed?'✓':'')+'</button><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-slate-900 truncate '+(t.completed?'line-through':'')+'">'+escapeHtml(t.title)+'</div><div class="text-xs text-slate-400">'+(sub?sub.emoji+' '+escapeHtml(sub.name):'Geral')+(t.due_date?' · '+new Date(t.due_date).toLocaleDateString('pt-BR'):'')+'</div></div>'+(!t.completed?'<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full '+u.tag+' whitespace-nowrap">'+u.text+'</span>':'')+'<button onclick="deleteTask(\''+t.id+'\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button></div>';
+  return '<div class="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100 '+(t.completed?'opacity-60':'')+'"><button onclick="toggleTask(\''+t.id+'\','+t.completed+')" class="w-6 h-6 rounded-md border-2 '+(t.completed?'bg-blue-900 border-blue-900 text-white':'border-slate-300')+' flex items-center justify-center text-sm flex-shrink-0">'+(t.completed?'✓':'')+'</button><div class="flex-1 min-w-0" onclick="openEditTaskModal(\''+t.id+'\')"><div class="text-sm font-semibold text-slate-900 truncate '+(t.completed?'line-through':'')+'">'+escapeHtml(t.title)+'</div><div class="text-xs text-slate-400">'+(sub?sub.emoji+' '+escapeHtml(sub.name):'Geral')+(t.due_date?' · '+new Date(t.due_date).toLocaleDateString('pt-BR'):'')+'</div></div>'+(!t.completed?'<span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full '+u.tag+' whitespace-nowrap">'+u.text+'</span>':'')+'<button onclick="deleteTask(\''+t.id+'\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button></div>';
 }
 
 function renderGrades() {
-  const ms = subjects.map(s => calcMean(s.grades)).filter(m => m !== null);
+  const ms = subjects.map(s => calcMean(s.grades, currentBim)).filter(m => m !== null);
   const overall = ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null;
-  const totalEv = subjects.reduce((s, sub) => s + (sub.grades || []).length, 0);
+  const totalEv = subjects.reduce((s, sub) => s + (sub.grades || []).filter(g => (g.period||1) === currentBim).length, 0);
   let html = '<div class="flex items-center justify-between mb-3"><div class="text-xl font-bold text-slate-900">Minhas notas</div><button onclick="openSubjectModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Matéria</button></div>';
-  html += '<div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-5 relative overflow-hidden"><div class="absolute -top-2 right-2 text-7xl opacity-10">📊</div><div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">📊 Média geral</div><div class="text-4xl font-extrabold mb-1">'+fmt(overall)+'</div><div class="text-xs opacity-80">'+ms.length+' matéria(s) · '+totalEv+' avaliação(ões)</div></div>';
+  html += '<div class="bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl p-5 text-white mb-3 relative overflow-hidden"><div class="absolute -top-2 right-2 text-7xl opacity-10">📊</div><div class="text-xs uppercase tracking-widest opacity-70 font-semibold mb-2">📊 Média geral · '+currentBim+'º bim</div><div class="text-4xl font-extrabold mb-1">'+fmt(overall)+'</div><div class="text-xs opacity-80 mb-1">'+ms.length+' matéria(s) · '+totalEv+' avaliação(ões)</div><div class="text-xs opacity-90 mt-2">'+smartMessage(overall, subjects)+'</div></div>';
+  // Bim tabs
+  html += '<div class="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl">';
+  for (let b = 1; b <= 4; b++) {
+    html += '<button onclick="setBim('+b+')" class="flex-1 py-2 rounded-lg text-xs font-bold '+(currentBim===b?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">'+b+'º bim</button>';
+  }
+  html += '</div>';
   html += '<div class="space-y-2">';
   if (!subjects.length) html += '<div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center"><div class="text-4xl mb-3">📚</div><div class="text-sm font-semibold text-slate-900 mb-1">Sem matérias ainda</div><div class="text-xs text-slate-500 mb-4">Adicione suas matérias do bimestre.</div><button onclick="openSubjectModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Adicionar primeira matéria</button></div>';
   else html += subjects.map(s => renderSubjectCard(s)).join('');
   html += '</div>';
   return html;
 }
+function setBim(b) { currentBim = b; expandedId = null; renderShell(); }
+
 function renderSubjectCard(s) {
-  const m = calcMean(s.grades);
+  const m = calcMean(s.grades, currentBim);
   const c = meanColor(m);
   const exp = expandedId === s.id;
-  const grds = (s.grades || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  const need = calcNeeded(s.grades, 7);
-  const pc = (s.grades || []).filter(g => g.score === null || g.score === undefined).length;
+  const grds = (s.grades || []).filter(g => (g.period||1) === currentBim).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const need = calcNeeded(s.grades, currentBim, 7);
+  const pc = grds.filter(g => g.score === null || g.score === undefined).length;
   let html = '<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden"><div onclick="toggleSubject(\''+s.id+'\')" class="p-4 flex items-center gap-3 cursor-pointer"><div class="w-11 h-11 rounded-xl '+c.bg+' flex items-center justify-center text-xl">'+(s.emoji||'📚')+'</div><div class="flex-1 min-w-0"><div class="text-sm font-bold text-slate-900 truncate">'+escapeHtml(s.name)+'</div><div class="text-xs '+c.text+' font-semibold">'+c.label+(grds.length?' · '+grds.length+' avaliação(ões)':'')+'</div></div><div class="text-2xl font-extrabold '+c.text+' px-3 py-1 '+c.bg+' rounded-lg min-w-[58px] text-center">'+fmt(m)+'</div><div class="text-slate-400 '+(exp?'rotate-180':'')+' transition">▾</div></div>';
   if (exp) {
     html += '<div class="border-t border-slate-100 p-4 bg-slate-50">';
-    if (!grds.length) html += '<div class="text-center py-3 text-xs text-slate-500 mb-2">Nenhuma avaliação cadastrada ainda.</div>';
+    if (!grds.length) html += '<div class="text-center py-3 text-xs text-slate-500 mb-2">Nenhuma avaliação cadastrada nesse bimestre.</div>';
     else {
       html += '<div class="space-y-2 mb-3">';
-      html += grds.map(g => '<div class="flex items-center gap-3 bg-white rounded-xl p-3"><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-slate-900 truncate">'+escapeHtml(g.evaluation_name)+'</div><div class="text-xs text-slate-400">Peso '+g.weight+(g.evaluation_date?' · '+new Date(g.evaluation_date).toLocaleDateString('pt-BR'):'')+'</div></div><div class="text-base font-extrabold '+(g.score===null||g.score===undefined?'text-slate-300 italic text-xs font-medium':'text-slate-900')+'">'+(g.score===null||g.score===undefined?'a fazer':fmt(g.score))+'</div><button onclick="event.stopPropagation(); deleteGrade(\''+g.id+'\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button></div>').join('');
+      html += grds.map(g => '<div class="flex items-center gap-3 bg-white rounded-xl p-3"><div class="flex-1 min-w-0" onclick="event.stopPropagation(); openEditGradeModal(\''+g.id+'\')"><div class="text-sm font-semibold text-slate-900 truncate">'+escapeHtml(g.evaluation_name)+'</div><div class="text-xs text-slate-400">Peso '+g.weight+(g.teacher_name?' · '+escapeHtml(g.teacher_name):'')+(g.evaluation_date?' · '+new Date(g.evaluation_date).toLocaleDateString('pt-BR'):'')+'</div></div><div class="text-base font-extrabold '+(g.score===null||g.score===undefined?'text-slate-300 italic text-xs font-medium':'text-slate-900')+'">'+(g.score===null||g.score===undefined?'a fazer':fmt(g.score))+'</div><button onclick="event.stopPropagation(); deleteGrade(\''+g.id+'\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button></div>').join('');
       html += '</div>';
     }
     html += renderMeanTip(m, need, pc);
-    html += '<div class="flex gap-2"><button onclick="openGradeModal(\''+s.id+'\')" class="flex-1 bg-blue-900 text-white text-sm font-semibold py-2.5 rounded-xl">+ Adicionar nota</button><button onclick="deleteSubject(\''+s.id+'\',\''+s.name.replace(/[\\\\']/g,'')+'\')" class="bg-white border border-slate-200 text-slate-500 hover:text-red-600 text-sm font-semibold px-4 rounded-xl">Apagar</button></div></div>';
+    html += '<div class="flex gap-2"><button onclick="openGradeModal(\''+s.id+'\')" class="flex-1 bg-blue-900 text-white text-sm font-semibold py-2.5 rounded-xl">+ Adicionar nota</button><button onclick="openEditSubjectModal(\''+s.id+'\')" class="bg-white border border-slate-200 text-slate-700 text-sm font-semibold px-4 rounded-xl">Editar</button><button onclick="deleteSubject(\''+s.id+'\',\''+s.name.replace(/[\\\\\\\\\']/g,'')+'\')" class="bg-white border border-slate-200 text-slate-500 hover:text-red-600 text-sm font-semibold px-4 rounded-xl">Apagar</button></div></div>';
   }
   html += '</div>';
   return html;
@@ -303,7 +407,7 @@ function renderMeanTip(m, need, pc) {
     return '<div class="rounded-xl p-3 mb-3 bg-amber-50 text-amber-800 text-xs font-medium leading-relaxed">🎯 Pra fechar com média 7, você precisa tirar pelo menos <strong>'+fmt(need)+'</strong> '+(pc>1?'em média nas pendentes':'na próxima')+'.</div>';
   }
   if (m !== null && m >= 7) return '<div class="rounded-xl p-3 mb-3 bg-green-50 text-green-700 text-xs font-medium leading-relaxed">✅ Sua média está em <strong>'+fmt(m)+'</strong>, acima da meta de 7,0.</div>';
-  if (m !== null && m < 7) return '<div class="rounded-xl p-3 mb-3 bg-amber-50 text-amber-800 text-xs font-medium leading-relaxed">⚠️ Sua média está em <strong>'+fmt(m)+'</strong>. Faltam <strong>'+fmt(7-m)+'</strong> ponto(s) pra atingir 7,0. Adicione uma próxima avaliação ou recuperação pra ver quanto precisa tirar.</div>';
+  if (m !== null && m < 7) return '<div class="rounded-xl p-3 mb-3 bg-amber-50 text-amber-800 text-xs font-medium leading-relaxed">⚠️ Sua média está em <strong>'+fmt(m)+'</strong>. Faltam <strong>'+fmt(7-m)+'</strong> ponto(s) pra atingir 7,0.</div>';
   return '';
 }
 function toggleSubject(id) { expandedId = expandedId === id ? null : id; renderShell(); }
@@ -336,44 +440,119 @@ async function toggleHabit(key, points, done) {
   if (done) await sb.from('habit_completions').delete().eq('habit_key', key).eq('completed_date', today);
   else {
     const { error } = await sb.from('habit_completions').insert({ habit_key: key, completed_date: today });
-    if (error && error.code !== '23505') alert('Erro: ' + error.message);
+    if (error && error.code !== '23505') toast('Erro: ' + error.message, 'error');
+    else if (!error) toast('+' + points + ' pontos!', 'success');
   }
   await loadAndRender();
 }
 function claimReward(n, c) { toast('"'+n+'" trocada! (implementação em breve)', 'success'); }
 
 function renderPrayers() {
-  let html = '<div class="flex items-center justify-between mb-3"><div class="text-xl font-bold text-slate-900">Mural de oração</div><button onclick="openPrayerModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Pedir</button></div>';
-  html += '<div class="bg-purple-50 rounded-xl p-3 text-xs text-purple-800 leading-relaxed mb-4 font-medium">💜 Comunidade de adolescentes adventistas · '+prayers.length+' pedidos recentes</div>';
-  if (!prayers.length) html += '<div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center"><div class="text-4xl mb-3">🙏</div><div class="text-sm font-semibold text-slate-900 mb-1">Sem pedidos ainda</div><div class="text-xs text-slate-500 mb-4">Compartilhe um pedido pra a comunidade orar com você.</div><button onclick="openPrayerModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Fazer primeiro pedido</button></div>';
-  else html += '<div class="space-y-3">'+prayers.map(p => renderPrayerCard(p)).join('')+'</div>';
+  const requests = prayers.filter(p => (p.prayer_type || 'request') === 'request');
+  const grats = prayers.filter(p => p.prayer_type === 'gratitude');
+  let html = '<div class="flex items-center justify-between mb-3"><div class="text-xl font-bold text-slate-900">Mural de oração</div><button onclick="openPrayerModal()" class="text-xs font-bold bg-blue-900 text-white px-3 py-1.5 rounded-full">+ Postar</button></div>';
+  html += '<div class="bg-purple-50 rounded-xl p-3 text-xs text-purple-800 leading-relaxed mb-4 font-medium">💜 Comunidade adolescente adventista · '+prayers.length+' postagens recentes</div>';
+  if (!prayers.length) {
+    html += '<div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center"><div class="text-4xl mb-3">🙏</div><div class="text-sm font-semibold text-slate-900 mb-1">Sem postagens ainda</div><div class="text-xs text-slate-500 mb-4">Compartilhe um pedido ou agradecimento.</div><button onclick="openPrayerModal()" class="bg-blue-900 text-white text-sm font-semibold px-5 py-2.5 rounded-xl">+ Fazer primeira postagem</button></div>';
+  } else {
+    if (grats.length) {
+      html += '<div class="text-xs uppercase tracking-wide font-bold text-emerald-700 mt-2 mb-2 px-1">🎉 Gratidões ('+grats.length+')</div><div class="space-y-3 mb-5">'+grats.map(p => renderPrayerCard(p)).join('')+'</div>';
+    }
+    if (requests.length) {
+      html += '<div class="text-xs uppercase tracking-wide font-bold text-blue-700 mt-2 mb-2 px-1">🙏 Pedidos ('+requests.length+')</div><div class="space-y-3">'+requests.map(p => renderPrayerCard(p)).join('')+'</div>';
+    }
+  }
   return html;
 }
 function renderPrayerCard(p) {
   const mine = p.user_id === currentUser.id;
-  const reacted = myReactions.has(p.id);
-  const count = reactionCounts[p.id] || 0;
+  const isGrat = p.prayer_type === 'gratitude';
+  const reactKey = isGrat ? 'celebrating' : 'praying';
+  const reacted = myReactions.has(p.id + ':' + reactKey);
+  const count = reactionCounts[p.id + ':' + reactKey] || 0;
   const name = p.anonymous ? 'Anônimo' : (p.display_name || 'Pessoa');
   const ageStr = p.age ? ' · '+p.age+' anos' : '';
   const init = name[0].toUpperCase();
   const grad = colorForId(p.id);
-  return '<div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="flex items-center gap-2.5 mb-2"><div class="w-9 h-9 rounded-full bg-gradient-to-br '+grad+' flex items-center justify-center text-white font-bold text-xs">'+init+'</div><div class="flex-1"><div class="text-xs font-bold text-slate-900">'+escapeHtml(name)+escapeHtml(ageStr)+'</div><div class="text-[10px] text-slate-400">'+relTime(p.created_at)+'</div></div>'+(mine?'<button onclick="deletePrayer(\''+p.id+'\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7">×</button>':'')+'</div><div class="text-sm text-slate-700 leading-relaxed mb-3">'+escapeHtml(p.content)+'</div><div class="border-t border-slate-100 pt-2.5 flex items-center gap-3"><button onclick="togglePrayer(\''+p.id+'\','+reacted+')" class="text-xs font-semibold '+(reacted?'text-blue-900':'text-slate-500')+'">🙏 '+(reacted?'Estou orando':'Orar por isso')+' · '+count+'</button></div></div>';
+  const badgeColor = isGrat ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700';
+  const reactLabel = isGrat ? (reacted ? '🎉 Celebrando' : 'Celebrar com') : (reacted ? '🙏 Estou orando' : 'Orar por isso');
+  return '<div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="flex items-center gap-2.5 mb-2"><div class="w-9 h-9 rounded-full bg-gradient-to-br '+grad+' flex items-center justify-center text-white font-bold text-xs">'+init+'</div><div class="flex-1"><div class="text-xs font-bold text-slate-900">'+escapeHtml(name)+escapeHtml(ageStr)+'</div><div class="text-[10px] text-slate-400">'+relTime(p.created_at)+'</div></div><span class="text-[10px] font-bold px-2 py-1 rounded-full '+badgeColor+'">'+(isGrat?'gratidão':'pedido')+'</span>'+(mine?'<button onclick="deletePrayer(\''+p.id+'\')" class="text-slate-300 hover:text-red-500 text-lg leading-none w-7 h-7 ml-1">×</button>':'')+'</div><div class="text-sm text-slate-700 leading-relaxed mb-3">'+escapeHtml(p.content)+'</div><div class="border-t border-slate-100 pt-2.5 flex items-center gap-3"><button onclick="togglePrayer(\''+p.id+'\','+reacted+',\''+reactKey+'\')" class="text-xs font-semibold '+(reacted?(isGrat?'text-emerald-700':'text-blue-900'):'text-slate-500')+'">'+reactLabel+' · '+count+'</button></div></div>';
 }
-async function togglePrayer(id, r) {
-  if (r) await sb.from('prayer_reactions').delete().eq('prayer_id', id).eq('user_id', currentUser.id);
-  else await sb.from('prayer_reactions').insert({ prayer_id: id, reaction_type: 'praying' });
+async function togglePrayer(id, r, type) {
+  if (r) await sb.from('prayer_reactions').delete().eq('prayer_id', id).eq('user_id', currentUser.id).eq('reaction_type', type);
+  else await sb.from('prayer_reactions').insert({ prayer_id: id, reaction_type: type });
   await loadAndRender();
 }
 async function deletePrayer(id) {
-  if (!confirm('Apagar seu pedido?')) return;
+  if (!confirm('Apagar sua postagem?')) return;
   await sb.from('prayers').delete().eq('id', id);
   await loadAndRender();
 }
 
+function renderProfile() {
+  const dn = profile?.display_name || '';
+  const age = profile?.age || '';
+  const school = profile?.school || '';
+  const grade = profile?.grade_level || '';
+  let html = '<div class="flex items-center justify-between mb-4"><button onclick="setTab(\'home\')" class="text-sm text-slate-500">← Voltar</button><div class="text-xl font-bold text-slate-900">Meu perfil</div><div></div></div>';
+  html += '<div class="bg-white rounded-2xl p-5 border border-slate-100 mb-4 text-center"><div class="w-20 h-20 mx-auto bg-gradient-to-br from-blue-700 to-blue-900 rounded-full flex items-center justify-center text-white font-extrabold text-3xl mb-3">'+userName()[0].toUpperCase()+'</div><div class="text-base font-bold text-slate-900">'+escapeHtml(userName())+'</div><div class="text-xs text-slate-500">'+escapeHtml(currentUser.email)+'</div></div>';
+  html += '<form onsubmit="saveProfile(event)" class="bg-white rounded-2xl p-5 border border-slate-100 space-y-4">';
+  html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Como você quer ser chamado</label><input id="pf_name" type="text" maxlength="30" value="'+escapeHtml(dn)+'" placeholder="Ex: Lucas" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
+  html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div>';
+  html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
+  html += '<button type="submit" class="w-full bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Salvar</button></form>';
+  html += '<div class="mt-4 space-y-2"><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  return html;
+}
+async function saveProfile(e) {
+  e.preventDefault();
+  const display_name = document.getElementById('pf_name').value.trim() || null;
+  const av = document.getElementById('pf_age').value;
+  const age = av === '' ? null : Number(av);
+  const school = document.getElementById('pf_school').value.trim() || null;
+  const grade_level = document.getElementById('pf_grade').value.trim() || null;
+  const data = { user_id: currentUser.id, display_name, age, school, grade_level, updated_at: new Date().toISOString() };
+  const { error } = await sb.from('profiles').upsert(data, { onConflict: 'user_id' });
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('Perfil salvo!', 'success');
+  await loadAndRender();
+}
+
+function renderFAQ() {
+  let html = '<div class="flex items-center justify-between mb-4"><button onclick="setTab(\'home\')" class="text-sm text-slate-500">← Voltar</button><div class="text-xl font-bold text-slate-900">Dúvidas frequentes</div><div></div></div>';
+  const cats = { uso: 'Como usar', notas: 'Notas e médias', pontos: 'Pontos e hábitos', oracao: 'Oração', privacidade: 'Privacidade', geral: 'Geral' };
+  for (const k of Object.keys(cats)) {
+    const items = FAQS.filter(f => f.cat === k);
+    if (!items.length) continue;
+    html += '<div class="text-xs uppercase tracking-wide font-bold text-slate-500 mt-4 mb-2 px-1">'+cats[k]+'</div><div class="space-y-2">';
+    html += items.map((f, i) => '<details class="bg-white rounded-xl border border-slate-100 p-4"><summary class="text-sm font-semibold text-slate-900 cursor-pointer">'+escapeHtml(f.q)+'</summary><div class="text-sm text-slate-600 leading-relaxed mt-3">'+escapeHtml(f.a)+'</div></details>').join('');
+    html += '</div>';
+  }
+  return html;
+}
+
+function openTour(step) {
+  const t = TOUR_STEPS[step];
+  if (!t) { closeModal(); localStorage.setItem('tour_done', '1'); return; }
+  const isLast = step === TOUR_STEPS.length - 1;
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-5xl mb-4">'+t.icon+'</div><div class="text-lg font-bold text-slate-900 mb-2">'+t.title+'</div><div class="text-sm text-slate-600 leading-relaxed mb-5">'+t.text+'</div><div class="flex items-center justify-between"><div class="flex gap-1.5">'+TOUR_STEPS.map((_, i) => '<div class="w-2 h-2 rounded-full '+(i===step?'bg-blue-900':'bg-slate-200')+'"></div>').join('')+'</div><div class="flex gap-2">'+(step>0?'<button onclick="openTour('+(step-1)+')" class="text-sm font-semibold text-slate-500 px-3 py-2">Voltar</button>':'<button onclick="closeTour()" class="text-sm font-semibold text-slate-500 px-3 py-2">Pular</button>')+'<button onclick="'+(isLast?'closeTour()':'openTour('+(step+1)+')')+'" class="text-sm font-bold bg-blue-900 text-white px-5 py-2 rounded-xl">'+(isLast?'Começar':'Próximo')+'</button></div></div></div></div>';
+}
+function closeTour() {
+  localStorage.setItem('tour_done', '1');
+  closeModal();
+}
+
 function openSubjectModal() {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl"><div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div><form onsubmit="handleAddSubject(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map((e,i) => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(i===0?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+EMOJIS[0]+'"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div><form onsubmit="handleAddSubject(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map((e,i) => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(i===0?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+EMOJIS[0]+'"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button></div></form></div></div>';
   setTimeout(() => document.getElementById('subjectName').focus(), 100);
+}
+function openEditSubjectModal(id) {
+  const s = subjects.find(x => x.id === id);
+  if (!s) return;
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Editar matéria</div><form onsubmit="handleEditSubject(event,\''+id+'\')" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" value="'+escapeHtml(s.name)+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map(e => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(s.emoji===e?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+(s.emoji||EMOJIS[0])+'"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Salvar</button></div></form></div></div>';
 }
 function pickEmoji(e) {
   document.getElementById('subjectEmoji').value = e;
@@ -381,65 +560,111 @@ function pickEmoji(e) {
 }
 async function handleAddSubject(e) {
   e.preventDefault();
-  const name = document.getElementById('subjectName').value.trim();
-  const emoji = document.getElementById('subjectEmoji').value;
-  await sb.from('subjects').insert({ name, emoji });
-  closeModal();
-  await loadAndRender();
+  const { error } = await sb.from('subjects').insert({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value });
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal(); await loadAndRender();
+}
+async function handleEditSubject(e, id) {
+  e.preventDefault();
+  const { error } = await sb.from('subjects').update({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value }).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal(); await loadAndRender();
 }
 
+function gradeFormHTML(prefix, g) {
+  const isEdit = !!g;
+  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="'+prefix+'Name" required maxlength="40" value="'+(isEdit?escapeHtml(g.evaluation_name):'')+'" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="'+prefix+'Weight" required min="1" max="10" step="1" value="'+(isEdit?g.weight:'1')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Bimestre</label><select id="'+prefix+'Period" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">'+[1,2,3,4].map(b => '<option value="'+b+'" '+((isEdit?(g.period||1):currentBim)===b?'selected':'')+'>'+b+'º bim</option>').join('')+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="'+prefix+'Score" min="0" max="10" step="0.1" value="'+(isEdit&&g.score!==null?g.score:'')+'" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="'+prefix+'Date" value="'+(isEdit&&g.evaluation_date?g.evaluation_date:'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor (opcional)</label><input type="text" id="'+prefix+'Teacher" maxlength="50" value="'+(isEdit&&g.teacher_name?escapeHtml(g.teacher_name):'')+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
+}
 function openGradeModal(sid) {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl"><div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div><form onsubmit="handleAddGrade(event,\''+sid+'\')" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="gradeName" required maxlength="40" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="gradeWeight" required min="1" max="10" step="1" value="1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="gradeScore" min="0" max="10" step="0.1" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="gradeDate" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div><form onsubmit="handleAddGrade(event,\''+sid+'\')" class="space-y-4">'+gradeFormHTML('grade', null)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button></div></form></div></div>';
   setTimeout(() => document.getElementById('gradeName').focus(), 100);
+}
+function openEditGradeModal(id) {
+  let g = null;
+  for (const s of subjects) { const x = (s.grades||[]).find(y => y.id === id); if (x) { g = x; break; } }
+  if (!g) return;
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Editar avaliação</div><form onsubmit="handleEditGrade(event,\''+id+'\')" class="space-y-4">'+gradeFormHTML('grade', g)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Salvar</button></div></form></div></div>';
+}
+function readGradeForm(prefix) {
+  const sv = document.getElementById(prefix+'Score').value;
+  const dv = document.getElementById(prefix+'Date').value;
+  const tv = document.getElementById(prefix+'Teacher').value.trim();
+  return {
+    evaluation_name: document.getElementById(prefix+'Name').value.trim(),
+    weight: Number(document.getElementById(prefix+'Weight').value),
+    period: Number(document.getElementById(prefix+'Period').value),
+    score: sv === '' ? null : Number(sv),
+    evaluation_date: dv === '' ? null : dv,
+    teacher_name: tv || null,
+  };
 }
 async function handleAddGrade(e, sid) {
   e.preventDefault();
-  const evaluation_name = document.getElementById('gradeName').value.trim();
-  const weight = Number(document.getElementById('gradeWeight').value);
-  const sv = document.getElementById('gradeScore').value;
-  const score = sv === '' ? null : Number(sv);
-  const dv = document.getElementById('gradeDate').value;
-  const evaluation_date = dv === '' ? null : dv;
-  await sb.from('grades').insert({ subject_id: sid, evaluation_name, weight, score, evaluation_date });
-  closeModal();
-  await loadAndRender();
+  const data = { ...readGradeForm('grade'), subject_id: sid };
+  const { error } = await sb.from('grades').insert(data);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal(); await loadAndRender();
+}
+async function handleEditGrade(e, id) {
+  e.preventDefault();
+  const { error } = await sb.from('grades').update(readGradeForm('grade')).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal(); await loadAndRender();
 }
 
+function taskFormHTML(t) {
+  const isEdit = !!t;
+  const opts = subjects.map(s => '<option value="'+s.id+'" '+(isEdit&&t.subject_id===s.id?'selected':'')+'>'+s.emoji+' '+escapeHtml(s.name)+'</option>').join('');
+  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Título</label><input type="text" id="taskTitle" required maxlength="80" value="'+(isEdit?escapeHtml(t.title):'')+'" placeholder="Ex: Estudar pra prova" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Matéria (opcional)</label><select id="taskSubject" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white"><option value="">Geral</option>'+opts+'</select></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="taskDate" value="'+(isEdit&&t.due_date?t.due_date.slice(0,10):'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
+}
 function openTaskModal() {
   modalEl.classList.remove('hidden');
-  const opts = subjects.map(s => '<option value="'+s.id+'">'+s.emoji+' '+escapeHtml(s.name)+'</option>').join('');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl"><div class="text-base font-bold text-slate-900 mb-4">Nova tarefa</div><form onsubmit="handleAddTask(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Título</label><input type="text" id="taskTitle" required maxlength="80" placeholder="Ex: Estudar pra prova" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Matéria (opcional)</label><select id="taskSubject" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 bg-white"><option value="">Geral</option>'+opts+'</select></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="taskDate" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Nova tarefa</div><form onsubmit="handleAddTask(event)" class="space-y-4">'+taskFormHTML(null)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Adicionar</button></div></form></div></div>';
   setTimeout(() => document.getElementById('taskTitle').focus(), 100);
+}
+function openEditTaskModal(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Editar tarefa</div><form onsubmit="handleEditTask(event,\''+id+'\')" class="space-y-4">'+taskFormHTML(t)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Salvar</button></div></form></div></div>';
+}
+function readTaskForm() {
+  const sv = document.getElementById('taskSubject').value;
+  const dv = document.getElementById('taskDate').value;
+  return { title: document.getElementById('taskTitle').value.trim(), subject_id: sv === '' ? null : sv, due_date: dv === '' ? null : dv };
 }
 async function handleAddTask(e) {
   e.preventDefault();
-  const title = document.getElementById('taskTitle').value.trim();
-  const sv = document.getElementById('taskSubject').value;
-  const subject_id = sv === '' ? null : sv;
-  const dv = document.getElementById('taskDate').value;
-  const due_date = dv === '' ? null : dv;
-  await sb.from('tasks').insert({ title, subject_id, due_date });
-  closeModal();
-  await loadAndRender();
+  const { error } = await sb.from('tasks').insert(readTaskForm());
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal(); await loadAndRender();
+}
+async function handleEditTask(e, id) {
+  e.preventDefault();
+  const { error } = await sb.from('tasks').update(readTaskForm()).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal(); await loadAndRender();
 }
 
 function openPrayerModal() {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl"><div class="text-base font-bold text-slate-900 mb-4">Pedido de oração</div><form onsubmit="handleAddPrayer(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Sua mensagem</label><textarea id="prayerContent" required maxlength="400" rows="4" placeholder="Conta o que tá no seu coração..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 resize-none"></textarea></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome (opcional)</label><input type="text" id="prayerName" maxlength="30" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input type="number" id="prayerAge" min="10" max="20" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="prayerAnon" class="w-4 h-4"><span class="text-xs text-slate-700 font-medium">Postar como anônimo</span></label><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Postar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Nova postagem</div><form onsubmit="handleAddPrayer(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Tipo</label><div class="grid grid-cols-2 gap-2"><label class="flex items-center justify-center gap-2 p-3 border-2 border-blue-700 bg-blue-50 rounded-xl cursor-pointer text-sm font-semibold text-blue-900"><input type="radio" name="ptype" value="request" checked class="hidden">🙏 Pedido</label><label class="flex items-center justify-center gap-2 p-3 border-2 border-slate-200 rounded-xl cursor-pointer text-sm font-semibold text-slate-700 has-[:checked]:border-emerald-700 has-[:checked]:bg-emerald-50 has-[:checked]:text-emerald-900"><input type="radio" name="ptype" value="gratitude" class="hidden">🎉 Gratidão</label></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Sua mensagem</label><textarea id="prayerContent" required minlength="3" maxlength="500" rows="4" placeholder="Conta o que tá no seu coração..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700 resize-none"></textarea></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome (opcional)</label><input type="text" id="prayerName" maxlength="30" value="'+escapeHtml(profile?.display_name||'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input type="number" id="prayerAge" min="10" max="25" value="'+escapeHtml(profile?.age||'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="prayerAnon" class="w-4 h-4"><span class="text-xs text-slate-700 font-medium">Postar como anônimo</span></label><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm">Postar</button></div></form></div></div>';
   setTimeout(() => document.getElementById('prayerContent').focus(), 100);
 }
 async function handleAddPrayer(e) {
   e.preventDefault();
+  const ptype = document.querySelector('input[name="ptype"]:checked').value;
   const content = document.getElementById('prayerContent').value.trim();
   const anonymous = document.getElementById('prayerAnon').checked;
   const dn = document.getElementById('prayerName').value.trim();
   const display_name = anonymous ? null : (dn || null);
   const av = document.getElementById('prayerAge').value;
   const age = av === '' ? null : Number(av);
-  await sb.from('prayers').insert({ content, anonymous, display_name, age });
-  closeModal();
-  await loadAndRender();
+  const { error } = await sb.from('prayers').insert({ content, anonymous, display_name, age, prayer_type: ptype });
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal(); await loadAndRender(); toast('Postagem enviada!', 'success');
 }
 
 async function toggleTask(id, c) {
@@ -502,7 +727,7 @@ async function handleAuth(e) {
 }
 async function logout() {
   await sb.auth.signOut();
-  currentUser = null; subjects = []; tasks = []; prayers = []; allHabits = []; expandedId = null; currentTab = 'home';
+  currentUser = null; subjects = []; tasks = []; prayers = []; allHabits = []; profile = null; expandedId = null; currentTab = 'home';
   renderAuth();
 }
 
