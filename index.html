@@ -412,20 +412,36 @@ async function loadAndRender() {
 function calcMean(grades, period) {
   let g = grades || [];
   if (period) g = g.filter(x => Number(x.period || 1) === Number(period));
-  const v = g.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
+  const main = g.filter(x => !x.is_recovery);
+  const recoveries = g.filter(x => x.is_recovery && x.recovers_grade_id);
+  const v = main.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
   if (!v.length) return null;
-  const t = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
-  const w = v.reduce((s, x) => s + Number(x.weight), 0);
+  let t = 0, w = 0;
+  for (const m of v) {
+    let s = Number(m.score);
+    const rec = recoveries.find(r => r.recovers_grade_id === m.id && r.score !== null && r.score !== undefined && !isNaN(Number(r.score)));
+    if (rec) s = Math.max(s, Number(rec.score));
+    t += s * Number(m.weight);
+    w += Number(m.weight);
+  }
   return w > 0 ? t / w : null;
 }
 function calcNeeded(grades, period, target = 7) {
   let g = grades || [];
   if (period) g = g.filter(x => Number(x.period || 1) === Number(period));
-  const v = g.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
-  const p = g.filter(x => x.score === null || x.score === undefined);
+  const main = g.filter(x => !x.is_recovery);
+  const recoveries = g.filter(x => x.is_recovery && x.recovers_grade_id);
+  const v = main.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
+  const p = main.filter(x => x.score === null || x.score === undefined);
   if (!p.length) return null;
-  const cs = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
-  const vw = v.reduce((s, x) => s + Number(x.weight), 0);
+  let cs = 0, vw = 0;
+  for (const m of v) {
+    let s = Number(m.score);
+    const rec = recoveries.find(r => r.recovers_grade_id === m.id && r.score !== null);
+    if (rec) s = Math.max(s, Number(rec.score));
+    cs += s * Number(m.weight);
+    vw += Number(m.weight);
+  }
   const pw = p.reduce((s, x) => s + Number(x.weight), 0);
   return pw > 0 ? (target * (vw + pw) - cs) / pw : null;
 }
@@ -1508,13 +1524,16 @@ async function handleEditSubject(e, id) {
   closeModal(); await loadAndRender();
 }
 
-function gradeFormHTML(prefix, g) {
+function gradeFormHTML(prefix, g, sid) {
   const isEdit = !!g;
-  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="'+prefix+'Name" required maxlength="40" value="'+(isEdit?escapeHtml(g.evaluation_name):'')+'" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="'+prefix+'Weight" required min="1" max="10" step="1" value="'+(isEdit?g.weight:'1')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Bimestre</label><select id="'+prefix+'Period" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">'+[1,2,3,4].map(b => '<option value="'+b+'" '+((isEdit?(g.period||1):currentBim)===b?'selected':'')+'>'+b+'º bim</option>').join('')+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="'+prefix+'Score" min="0" max="10" step="0.1" value="'+(isEdit&&g.score!==null?g.score:'')+'" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="'+prefix+'Date" value="'+(isEdit&&g.evaluation_date?g.evaluation_date:'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor (opcional)</label><input type="text" id="'+prefix+'Teacher" maxlength="50" value="'+(isEdit&&g.teacher_name?escapeHtml(g.teacher_name):'')+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
+  const subj = subjects.find(s => s.id === sid) || (isEdit ? subjects.find(s => (s.grades||[]).some(x => x.id === g.id)) : null);
+  const otherGrades = subj ? (subj.grades||[]).filter(x => !x.is_recovery && (!isEdit || x.id !== g.id)) : [];
+  const recoptions = otherGrades.map(x => '<option value="'+x.id+'" '+(isEdit && g.recovers_grade_id===x.id?'selected':'')+'>'+escapeHtml(x.evaluation_name)+' (peso '+x.weight+(x.score!==null?', nota '+fmt(x.score):'')+')</option>').join('');
+  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="'+prefix+'Name" required maxlength="40" value="'+(isEdit?escapeHtml(g.evaluation_name):'')+'" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="'+prefix+'Weight" required min="1" max="10" step="1" value="'+(isEdit?g.weight:'1')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Bimestre</label><select id="'+prefix+'Period" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">'+[1,2,3,4].map(b => '<option value="'+b+'" '+((isEdit?(g.period||1):currentBim)===b?'selected':'')+'>'+b+'º bim</option>').join('')+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="'+prefix+'Score" min="0" max="10" step="0.1" value="'+(isEdit&&g.score!==null?g.score:'')+'" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="'+prefix+'Date" value="'+(isEdit&&g.evaluation_date?g.evaluation_date:'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor (opcional)</label><input type="text" id="'+prefix+'Teacher" maxlength="50" value="'+(isEdit&&g.teacher_name?escapeHtml(g.teacher_name):'')+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>'+(otherGrades.length>0?'<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-2"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="'+prefix+'IsRec" '+(isEdit&&g.is_recovery?'checked':'')+' onchange="document.getElementById(\''+prefix+'RecOf\').classList.toggle(\'hidden\', !this.checked)" class="w-4 h-4"><span class="text-xs text-slate-700 dark:text-slate-200 font-semibold">Esta é uma recuperação</span></label><div id="'+prefix+'RecOf" class="'+(isEdit&&g.is_recovery?'':'hidden')+'"><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Substitui qual avaliação? (se nota for maior)</label><select id="'+prefix+'RecGrade" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white"><option value="">Selecione...</option>'+recoptions+'</select><div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">A nota da recuperação só conta se for maior que a original. Funciona pra qualquer escola que use sistema de recuperação.</div></div></div>':'');
 }
 function openGradeModal(sid) {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div><form onsubmit="handleAddGrade(event,\''+sid+'\')" class="space-y-4">'+gradeFormHTML('grade', null)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Adicionar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div><form onsubmit="handleAddGrade(event,\''+sid+'\')" class="space-y-4">'+gradeFormHTML('grade', null, sid)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Adicionar</button></div></form></div></div>';
   setTimeout(() => document.getElementById('gradeName').focus(), 100);
 }
 function openEditGradeModal(id) {
@@ -1522,12 +1541,16 @@ function openEditGradeModal(id) {
   for (const s of subjects) { const x = (s.grades||[]).find(y => y.id === id); if (x) { g = x; break; } }
   if (!g) return;
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Editar avaliação</div><form onsubmit="handleEditGrade(event,\''+id+'\')" class="space-y-4">'+gradeFormHTML('grade', g)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Editar avaliação</div><form onsubmit="handleEditGrade(event,\''+id+'\')" class="space-y-4">'+gradeFormHTML('grade', g, g.subject_id || (subjects.find(s => (s.grades||[]).some(x => x.id===g.id))||{}).id)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
 }
 function readGradeForm(prefix) {
   const sv = document.getElementById(prefix+'Score').value;
   const dv = document.getElementById(prefix+'Date').value;
   const tv = document.getElementById(prefix+'Teacher').value.trim();
+  const recCheck = document.getElementById(prefix+'IsRec');
+  const isRec = recCheck ? recCheck.checked : false;
+  const recOfEl = document.getElementById(prefix+'RecGrade');
+  const recOf = (isRec && recOfEl && recOfEl.value) ? recOfEl.value : null;
   return {
     evaluation_name: document.getElementById(prefix+'Name').value.trim(),
     weight: Number(document.getElementById(prefix+'Weight').value),
@@ -1535,6 +1558,8 @@ function readGradeForm(prefix) {
     score: sv === '' ? null : Number(sv),
     evaluation_date: dv === '' ? null : dv,
     teacher_name: tv || null,
+    is_recovery: isRec && !!recOf,
+    recovers_grade_id: recOf,
   };
 }
 async function handleAddGrade(e, sid) {
