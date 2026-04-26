@@ -979,7 +979,15 @@ function navBtn(tab, icon, label) {
   const cls = active ? 'bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500';
   return '<button onclick="setTab(\''+tab+'\')" class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition '+cls+'"><div class="text-lg">'+icon+'</div><div class="text-[9px] font-bold uppercase tracking-wide">'+label+'</div></button>';
 }
-function setTab(t) { currentTab = t; expandedId = null; renderShell(); window.scrollTo(0,0); }
+function setTab(t) {
+  currentTab = t;
+  expandedId = null;
+  renderShell();
+  window.scrollTo(0,0);
+  if (t === 'friends' || t === 'notifications' || t === 'community') {
+    setTimeout(() => loadAndRender(), 50);
+  }
+}
 
 function renderHome(stats) {
   const upcoming = tasks.filter(t => !t.completed).slice(0, 3);
