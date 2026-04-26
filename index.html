@@ -78,6 +78,10 @@
   html.dark .bg-indigo-50 { background-color: rgba(99, 102, 241, 0.15) !important; }
   html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.15) !important; }
   html.dark .bg-pink-50 { background-color: rgba(236, 72, 153, 0.15) !important; }
+  html.dark input, html.dark textarea, html.dark select { background-color: #1e293b !important; color: #f1f5f9 !important; border-color: #475569 !important; }
+  html.dark input::placeholder, html.dark textarea::placeholder { color: #64748b !important; }
+  html.dark .border-slate-200 { border-color: #475569 !important; }
+  html.dark .bg-white\\/95 { background-color: rgba(15, 23, 42, 0.95) !important; }
 
 </style>
 </head>
@@ -654,7 +658,7 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.0.1';
 const CHANGELOG = [
   { v: '2.0', emoji: '🌙', title: 'Modo escuro chegou', items: [
     'Toggle de modo escuro no perfil',
@@ -871,7 +875,7 @@ function renderShell() {
   else if (currentTab === 'faq') content = renderFAQ();
   else if (currentTab === 'friends') content = renderFriends();
   else if (currentTab === 'notifications') content = renderNotifications();
-  app.innerHTML = '<div class="min-h-screen pb-28"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-6"><div><div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">'+getGreeting()+',</div><div class="text-xl font-extrabold text-slate-900 truncate max-w-[220px] mt-0.5">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="setTab(\'notifications\')" class="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm">🔔'+(getUnreadNotifs()>0?'<div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">'+getUnreadNotifs()+'</div>':'')+'</button><button onclick="setTab(\'faq\')" title="Dúvidas" class="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-blue-700 text-lg shadow-sm">?</button><button onclick="setTab(\'profile\')" class="relative">'+avatarHtml('md')+'<div class="absolute bottom-0 right-0 w-3 h-3 '+(profileCompleteness().pct === 100 ? 'bg-green-500' : 'bg-red-500 animate-pulse')+' border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-3 left-3 right-3 z-40"><div class="max-w-md mx-auto glass rounded-3xl shadow-2xl shadow-indigo-900/10 border border-white/40 flex justify-around px-1 py-2">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div>';
+  app.innerHTML = '<div class="min-h-screen pb-28"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-6"><div><div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">'+getGreeting()+',</div><div class="text-xl font-extrabold text-slate-900 truncate max-w-[220px] mt-0.5">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm" title="Tema">'+(getTheme()==='dark'?'☀️':'🌙')+'</button><button onclick="setTab(\'notifications\')" class="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm">🔔'+(getUnreadNotifs()>0?'<div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">'+getUnreadNotifs()+'</div>':'')+'</button><button onclick="setTab(\'profile\')" class="relative">'+avatarHtml('md')+'<div class="absolute bottom-0 right-0 w-3 h-3 '+(profileCompleteness().pct === 100 ? 'bg-green-500' : 'bg-red-500 animate-pulse')+' border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-3 left-3 right-3 z-40"><div class="max-w-md mx-auto glass rounded-3xl shadow-2xl shadow-indigo-900/10 border border-white/40 flex justify-around px-1 py-2">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div>';
 }
 function navBtn(tab, icon, label) {
   const active = currentTab === tab;
