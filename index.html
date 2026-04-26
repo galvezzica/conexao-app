@@ -335,10 +335,12 @@ const FAQS = [
 
 const TOUR_STEPS = [
   { icon: '👋', title: 'Bem-vindo ao Conexão!', text: 'Esse é seu app pra organizar a vida escolar e espiritual em um lugar só. Vou te mostrar rapidinho o que dá pra fazer aqui.' },
-  { icon: '📊', title: 'Cadastra tuas notas', text: 'Na aba Notas você lança matéria por matéria. O app calcula a média e mostra exatamente quanto você precisa tirar nas próximas avaliações pra passar.' },
+  { icon: '📊', title: 'Cadastra cada avaliação', text: 'Na aba Notas, cria a matéria (Ex: Matemática) e adiciona CADA avaliação separada com o peso certo. Ex: Prova vale peso 3, Trabalho peso 1. Pergunta o peso pro seu professor se não souber.' },
+  { icon: '🎯', title: 'Faltou nota? Sem problema', text: 'Se ainda não fez a prova, deixa o campo "Nota" em branco. O app vai te mostrar exatamente quanto você precisa tirar pra fechar com média 7.' },
+  { icon: '🔄', title: 'Fez recuperação? Cadastra vinculada', text: 'Quando você faz uma recuperação, marca o checkbox "Esta é uma recuperação" e escolhe qual avaliação ela substitui. O app pega automático o MAIOR valor entre a nota original e a recuperação.' },
   { icon: '📚', title: 'Organiza tarefas', text: 'Na aba Tarefas você anota provas, trabalhos e lembretes. O app agrupa por urgência: Hoje, Esta semana, Mais pra frente. Não esquece mais nada.' },
   { icon: '⭐', title: 'Ganha pontos com hábitos', text: 'Na aba Pontos você marca todo dia se dormiu cedo, leu a Bíblia, se exercitou. Cada hábito vale pontos. Acumula, ganha conquistas, troca por recompensas.' },
-  { icon: '🙏', title: 'Mural de oração', text: 'Compartilha pedido ou gratidão com outros adolescentes adventistas. A comunidade ora junto, celebra junto. Pode ser anônimo se você quiser.' },
+  { icon: '🙏', title: 'Mural de oração e amigos', text: 'Compartilha pedidos, gratidões, conquistas. Adiciona colegas da mesma escola como amigos. A comunidade ora junto, celebra junto. Pode ser anônimo se quiser.' },
 ];
 
 let mode = 'login', currentUser = null, currentTab = 'home';
@@ -765,8 +767,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 const CHANGELOG = [
+  { v: '2.3', emoji: '🔄', title: 'Recuperação de nota', items: [
+    'Agora cadastra a recuperação VINCULADA à avaliação original',
+    'O app pega automático o MAIOR valor entre as duas',
+    'Funciona pra qualquer escola que use sistema de recuperação',
+    'Tour atualizado ensinando como cadastrar certinho',
+  ]},
   { v: '2.2', emoji: '🔥', title: 'Recursos virais', items: [
     'Convite com bônus mútuo (você + amigo ganham tema premium)',
     'Caixinha de recompensa diária ao abrir o app',
