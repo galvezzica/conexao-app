@@ -357,6 +357,7 @@ async function loadAndRender() {
   }
   setTimeout(notifyOverdue, 1500);
   setTimeout(checkBadges, 800);
+  setTimeout(() => showWhatsNew(false), 1200);
 }
 
 function calcMean(grades, period) {
@@ -544,6 +545,67 @@ function userName() {
   if (profile && profile.display_name) return profile.display_name;
   return (currentUser.email || 'Você').split('@')[0];
 }
+
+const APP_VERSION = '1.7';
+const CHANGELOG = [
+  { v: '1.7', emoji: '🎨', title: 'Cara nova', items: [
+    'Bottom nav flutuante com efeito glass',
+    'Gradientes coloridos nos botões e heroes',
+    'Animações de toque em tudo',
+    'Cards mais arredondados e modernos',
+  ]},
+  { v: '1.6', emoji: '👥', title: 'Amigos por escola', items: [
+    'Conecte com colegas da sua escola',
+    'Solicitações de amizade mútuas',
+    'Aba Descobrir mostra quem é da mesma série e turma',
+  ]},
+  { v: '1.5', emoji: '📷', title: 'Foto de perfil com edição', items: [
+    'Upload da galeria',
+    'Zoom e rotação antes de salvar',
+    'Crop quadrado pra ficar perfeito',
+  ]},
+  { v: '1.4', emoji: '💬', title: 'Feedback', items: [
+    'Manda sugestões e bugs direto pelo perfil',
+    'Avaliação por estrelas',
+  ]},
+  { v: '1.3', emoji: '🏆', title: 'Gamificação extrema', items: [
+    '3 desafios semanais e 3 mensais com progresso',
+    '10 badges que desbloqueiam automaticamente',
+    'Streak visual com fogo crescente',
+    'Feed da comunidade com 4 reações',
+  ]},
+  { v: '1.2', emoji: '🔔', title: 'Notificações reais', items: [
+    'Push real direto no celular',
+    'Lembrete diário às 8h se tem tarefa atrasada',
+    'Recuperação de senha por email',
+  ]},
+  { v: '1.0', emoji: '📱', title: 'Tutorial de instalação', items: [
+    'Banner pra instalar como app no celular',
+    'Passo a passo pra iPhone e Android',
+  ]},
+];
+
+function showWhatsNew(force) {
+  const seen = localStorage.getItem('seen_version');
+  if (!force && seen === APP_VERSION) return;
+  const news = force ? CHANGELOG : CHANGELOG.filter(c => !seen || c.v > seen);
+  if (!news.length) return;
+  modalEl.classList.remove('hidden');
+  let items = '';
+  for (const e of news) {
+    items += '<div class="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-3"><div class="flex items-center gap-2 mb-2"><span class="text-2xl">' + e.emoji + '</span><div class="flex-1"><div class="text-sm font-bold text-slate-900">' + e.title + '</div><div class="text-[10px] uppercase tracking-wide text-indigo-600 font-bold">v' + e.v + '</div></div></div><ul class="space-y-1.5">';
+    for (const it of e.items) items += '<li class="text-xs text-slate-700 leading-relaxed flex gap-2"><span class="text-indigo-500 flex-shrink-0">▸</span><span>' + it + '</span></li>';
+    items += '</ul></div>';
+  }
+  const titleText = force ? 'Histórico de novidades' : (seen ? 'Olha o que tem de novo!' : 'Bem-vindo à versão ' + APP_VERSION);
+  const subText = force ? 'Tudo que mudou nas últimas atualizações' : (seen ? 'A gente atualizou o app desde sua última visita' : 'Esse é o que vem por aqui');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeWhatsNew()"><div class="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl p-6 shadow-2xl anim-up max-h-[85vh] overflow-y-auto"><div class="text-center mb-5"><div class="text-4xl mb-2">✨</div><div class="text-lg font-bold text-slate-900">' + titleText + '</div><div class="text-xs text-slate-500 mt-1">' + subText + '</div></div>' + items + '<button onclick="closeWhatsNew()" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3 rounded-2xl mt-2 shadow-lg shadow-indigo-500/30">Entendi</button></div></div>';
+}
+function closeWhatsNew() {
+  localStorage.setItem('seen_version', APP_VERSION);
+  closeModal();
+}
+
 function getStats() {
   const today = new Date().toISOString().slice(0, 10);
   const todayKeys = new Set(allHabits.filter(h => h.completed_date === today).map(h => h.habit_key));
@@ -668,7 +730,7 @@ function smartMessage(overall, subjs) {
 }
 
 function renderAuth() {
-  app.innerHTML = '<div class="min-h-screen flex items-center justify-center px-5 py-10"><div class="w-full max-w-md"><div class="text-center mb-8"><div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg">C</div><div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div><div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div></div><div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100"><div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl"><button onclick="setMode(\'login\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='login'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Entrar</button><button onclick="setMode(\'signup\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='signup'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Criar conta</button></div><form onsubmit="handleAuth(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div><button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 rounded-2xl shadow-lg shadow-indigo-500/30">'+(mode==='login'?'Entrar':'Criar minha conta')+'</button><div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div>'+(mode==='login'?'<button type="button" onclick="openForgotPassword()" class="w-full text-xs text-blue-700 font-semibold py-1">Esqueci a senha</button>':'')+'</form></div><div class="text-center text-xs text-slate-400 mt-6">v0.8</div></div></div>';
+  app.innerHTML = '<div class="min-h-screen flex items-center justify-center px-5 py-10"><div class="w-full max-w-md"><div class="text-center mb-8"><div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg">C</div><div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div><div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div></div><div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100"><div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl"><button onclick="setMode(\'login\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='login'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Entrar</button><button onclick="setMode(\'signup\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='signup'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Criar conta</button></div><form onsubmit="handleAuth(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div><button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 rounded-2xl shadow-lg shadow-indigo-500/30">'+(mode==='login'?'Entrar':'Criar minha conta')+'</button><div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div>'+(mode==='login'?'<button type="button" onclick="openForgotPassword()" class="w-full text-xs text-blue-700 font-semibold py-1">Esqueci a senha</button>':'')+'</form></div><div class="text-center text-xs text-slate-400 mt-6">v' + APP_VERSION + '</div></div></div>';
 }
 
 function renderShell() {
@@ -1125,7 +1187,7 @@ function renderProfile() {
   html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Turma (opcional)</label><input id="pf_class" type="text" maxlength="5" value="'+escapeHtml(profile?.class_letter||'')+'" placeholder="Ex: 9A" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></form>';
-  html += '<div class="mt-4 space-y-2"><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  html += '<div class="mt-4 space-y-2"><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
   return html;
 }
 async function saveProfile(e) {
