@@ -141,9 +141,9 @@ function showInstallTutorial() {
   } else if (p === 'android') {
     steps = [
       { icon: '⋮', title: 'Toque no menu', text: 'No Chrome, abre os 3 pontinhos no canto superior direito.' },
-      { icon: '📲', title: 'Toque em "Instalar app"', text: 'Procure essa opção no menu (pode aparecer também como "Adicionar à tela inicial").' },
-      { icon: '✅', title: 'Confirme a instalação', text: 'Toque em "Instalar" no popup que aparecer.' },
-      { icon: '🎉', title: 'Pronto!', text: 'O ícone vai aparecer na sua tela inicial. Funciona igual qualquer app, abre sem barra do navegador.' }
+      { icon: '⚠️', title: 'IMPORTANTE: procure "Instalar app"', text: 'Tem que ser EXATAMENTE "Instalar app". Se aparecer só "Adicionar à tela inicial", não é o mesmo, vai abrir com a barra do Chrome.' },
+      { icon: '✅', title: 'Confirme', text: 'Toque em "Instalar" no popup. O Chrome vai instalar como app de verdade.' },
+      { icon: '🎉', title: 'Pronto!', text: 'Abra pelo novo ícone na tela inicial. Vai abrir em tela cheia, SEM barra do Chrome em cima.' }
     ];
   } else {
     steps = [
