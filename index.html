@@ -338,7 +338,7 @@ const TOUR_STEPS = [
   { icon: '📚', title: 'Passo 1: cadastra a matéria', text: 'Na aba Notas, toca em + Matéria. Coloca o nome (Ex: Matemática) e, se quiser, o professor. Quando você adicionar nota nessa matéria depois, o professor já vem preenchido sozinho.' },
   { icon: '📊', title: 'Passo 2: cadastra TODAS as avaliações', text: 'Aqui tá o segredo. Não cadastra só as provas. Cadastra também trabalhos, participação, atividades contínuas, tudo que entra no boletim. Se faltar alguma, a média do app vai ficar diferente da real.' },
   { icon: '⚖️', title: 'Passo 3: confere o peso', text: 'Cada avaliação tem um peso. Prova vale 3, trabalho vale 1, participação vale 1, varia por colégio. Pergunta pro teu professor ou olha no boletim. Se não souber, deixa peso 1 mesmo.' },
-  { icon: '🔄', title: 'Recuperação: cadastra separado', text: 'Se você fez recuperação de uma prova, cadastra ela como uma avaliação nova (Ex: Recuperação Prova 1). Não apaga a nota antiga. O app já entende e usa a maior das duas.' },
+  { icon: '🔄', title: 'Recuperação: edita a prova antiga', text: 'Se fez recuperação e foi melhor, abre a nota antiga e troca pelo valor maior. Não cadastra a recuperação como avaliação nova, senão o app conta as duas e tua média fica errada.' },
   { icon: '🎯', title: 'Pronto, tá tudo certo', text: 'Cadastrando assim a média do app vai bater com a do colégio. Se tiver dúvida, abre o menu Ajuda. Bora?' },
 ];
 
@@ -394,8 +394,9 @@ async function loadAndRender() {
   currentBim = currentBim || 1;
   renderShell();
   // Tour: dispara na primeira vez OU pra todo mundo que ainda não viu o tour novo (v3) sobre cadastro de notas
+  // Espera os outros modais (whatsNew, dailyBox) terminarem pra não sobrescrever
   if (!localStorage.getItem('tour_v3_done')) {
-    setTimeout(() => openTour(0), 600);
+    setTimeout(tryOpenTourV3, 4000);
   }
   setTimeout(notifyOverdue, 1500);
   setTimeout(checkBadges, 800);
@@ -1500,6 +1501,14 @@ function closeTour() {
   localStorage.setItem('tour_done', '1');
   closeModal();
 }
+function tryOpenTourV3() {
+  if (localStorage.getItem('tour_v3_done')) return;
+  if (modalEl && !modalEl.classList.contains('hidden')) {
+    setTimeout(tryOpenTourV3, 2500);
+    return;
+  }
+  openTour(0);
+}
 
 function openSubjectModal() {
   modalEl.classList.remove('hidden');
@@ -1716,13 +1725,4 @@ async function handleResetPassword(e) {
 }
 
 // Detecta link de reset
-if (window.location.hash.includes('type=recovery') || window.location.search.includes('reset=1')) {
-  sb.auth.onAuthStateChange((event) => {
-    if (event === 'PASSWORD_RECOVERY') renderResetPassword();
-  });
-  setTimeout(() => { if (window.location.hash.includes('type=recovery')) renderResetPassword(); }, 500);
-}
-checkAuth();
-</script>
-</body>
-</html>
+if (window.location.hash.includes('type=recovery') || wi
