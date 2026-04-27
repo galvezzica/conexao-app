@@ -656,6 +656,60 @@ function adminBtnHtml() {
   return '<button onclick="setTab(\'admin\')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30">🛠️ Painel Admin (' + adminFeedbacks.length + ' feedbacks)</button>';
 }
 
+
+let adminStats = null;
+let adminTab = 'metrics';
+async function loadAdminStats() {
+  try {
+    const { data, error } = await sb.rpc('admin_stats');
+    if (error) { console.error('admin_stats err', error); return; }
+    adminStats = data;
+  } catch (e) { console.error(e); }
+}
+function renderAdminStats() {
+  if (!adminStats) return '<div class="text-center py-10 text-slate-500">Carregando métricas...</div>';
+  const s = adminStats;
+  const pctComplete = s.total_users > 0 ? Math.round((s.completed_profiles / s.total_users) * 100) : 0;
+  const pctSubject = s.total_users > 0 ? Math.round((s.with_subjects / s.total_users) * 100) : 0;
+  const pctGrade = s.total_users > 0 ? Math.round((s.with_grades / s.total_users) * 100) : 0;
+  const pctTask = s.total_users > 0 ? Math.round((s.with_tasks / s.total_users) * 100) : 0;
+  const pctHabit = s.total_users > 0 ? Math.round((s.with_habits / s.total_users) * 100) : 0;
+  const pctActiveToday = s.total_users > 0 ? Math.round((s.active_today / s.total_users) * 100) : 0;
+  const pctActiveWeek = s.total_users > 0 ? Math.round((s.active_week / s.total_users) * 100) : 0;
+  let html = '<div class="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-5 text-white mb-4 shadow-xl"><div class="text-xs uppercase tracking-widest opacity-90 font-bold mb-1">Total de usuários</div><div class="text-5xl font-extrabold mb-1">' + s.total_users + '</div><div class="text-xs opacity-90">' + s.completed_profiles + ' com perfil completo · ' + s.with_photo + ' com foto</div></div>';
+  html += '<div class="text-base font-bold text-slate-900 mb-2">📊 Atividade</div><div class="grid grid-cols-2 gap-3 mb-4"><div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="text-2xl font-extrabold text-emerald-600">' + s.active_today + '</div><div class="text-xs text-slate-500 font-medium mt-0.5">ativos hoje (' + pctActiveToday + '%)</div></div><div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="text-2xl font-extrabold text-blue-600">' + s.active_week + '</div><div class="text-xs text-slate-500 font-medium mt-0.5">ativos 7 dias (' + pctActiveWeek + '%)</div></div></div>';
+  html += '<div class="text-base font-bold text-slate-900 mb-2">🎯 Funil de ativação</div><div class="bg-white rounded-2xl p-4 border border-slate-100 mb-4 space-y-3">';
+  const funnel = [
+    { label: 'Cadastrou conta', value: s.total_users, pct: 100, color: 'bg-slate-700' },
+    { label: 'Completou perfil', value: s.completed_profiles, pct: pctComplete, color: 'bg-indigo-600' },
+    { label: 'Cadastrou matéria', value: s.with_subjects, pct: pctSubject, color: 'bg-blue-600' },
+    { label: 'Lançou nota', value: s.with_grades, pct: pctGrade, color: 'bg-cyan-600' },
+    { label: 'Criou tarefa', value: s.with_tasks, pct: pctTask, color: 'bg-amber-600' },
+    { label: 'Marcou hábito', value: s.with_habits, pct: pctHabit, color: 'bg-emerald-600' },
+  ];
+  for (const f of funnel) html += '<div><div class="flex justify-between text-xs font-semibold mb-1"><span class="text-slate-700">' + f.label + '</span><span class="text-slate-900">' + f.value + ' (' + f.pct + '%)</span></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ' + f.color + ' rounded-full" style="width:' + f.pct + '%"></div></div></div>';
+  html += '</div>';
+  html += '<div class="text-base font-bold text-slate-900 mb-2">📦 Volume total</div><div class="grid grid-cols-2 gap-2 mb-4">';
+  const vol = [
+    { l: 'Matérias', v: s.total_subjects, e: '📚' },
+    { l: 'Notas', v: s.total_grades, e: '📊' },
+    { l: 'Tarefas', v: s.total_tasks, e: '✅' },
+    { l: 'Hábitos', v: s.total_habits, e: '⭐' },
+    { l: 'Pedidos oração', v: s.total_prayers, e: '🙏' },
+    { l: 'Posts no feed', v: s.total_feed_posts, e: '💬' },
+    { l: 'Reações', v: s.total_reactions, e: '❤️' },
+    { l: 'Feedbacks', v: s.total_feedbacks, e: '📝' },
+  ];
+  for (const v of vol) html += '<div class="bg-white rounded-xl p-3 border border-slate-100 flex items-center gap-2"><span class="text-xl">' + v.e + '</span><div><div class="text-lg font-extrabold text-slate-900 leading-none">' + v.v + '</div><div class="text-[10px] text-slate-500 font-medium mt-0.5">' + v.l + '</div></div></div>';
+  html += '</div>';
+  if (s.schools && s.schools.length) {
+    html += '<div class="text-base font-bold text-slate-900 mb-2">🏫 Escolas</div><div class="bg-white rounded-2xl p-3 border border-slate-100 space-y-2">';
+    for (const sc of s.schools) html += '<div class="flex justify-between items-center"><span class="text-sm text-slate-700">' + escapeHtml(sc.school) + '</span><span class="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-1 rounded-full">' + sc.count + ' aluno(s)</span></div>';
+    html += '</div>';
+  }
+  return html;
+}
+
 function isAdmin() {
   return currentUser && currentUser.email === 'bruno.galvez@gmail.com';
 }
@@ -667,6 +721,10 @@ async function loadAdminFeedbacks() {
 }
 function renderAdmin() {
   if (!isAdmin()) return '<div class="text-center py-10 text-slate-500">Acesso restrito.</div>';
+  let header = '<div class="flex items-center justify-between mb-4"><button onclick="setTab(\'profile\')" class="text-sm text-slate-500">← Voltar</button><div class="text-xl font-bold text-slate-900">🛠️ Admin</div><div></div></div>';
+  header += '<div class="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl"><button onclick="adminTab=\'metrics\'; renderShell();" class="flex-1 py-2 rounded-lg text-xs font-bold ' + (adminTab==="metrics"?"bg-white text-slate-900 shadow-sm":"text-slate-500") + '">📊 Métricas</button><button onclick="adminTab=\'feedbacks\'; renderShell();" class="flex-1 py-2 rounded-lg text-xs font-bold ' + (adminTab==="feedbacks"?"bg-white text-slate-900 shadow-sm":"text-slate-500") + '">💬 Feedbacks (' + adminFeedbacks.length + ')</button></div>';
+  if (adminTab === 'metrics') return header + renderAdminStats();
+  let html = header;
   const filtered = adminFilter === 'all' ? adminFeedbacks : adminFeedbacks.filter(f => f.type === adminFilter);
   const counts = {
     all: adminFeedbacks.length,
@@ -675,8 +733,7 @@ function renderAdmin() {
     praise: adminFeedbacks.filter(f => f.type === 'praise').length,
     other: adminFeedbacks.filter(f => f.type === 'other').length,
   };
-  let html = '<div class="flex items-center justify-between mb-4"><button onclick="setTab(\'profile\')" class="text-sm text-slate-500">← Voltar</button><div class="text-xl font-bold text-slate-900">🛠️ Admin · Feedbacks</div><div></div></div>';
-  html += '<div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 text-white mb-4"><div class="text-xs uppercase tracking-wide opacity-90">Total</div><div class="text-3xl font-extrabold">' + counts.all + '</div></div>';
+  html += '<div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 text-white mb-4"><div class="text-xs uppercase tracking-wide opacity-90">Total de feedbacks</div><div class="text-3xl font-extrabold">' + counts.all + '</div></div>';
   html += '<div class="flex gap-2 mb-4 overflow-x-auto scroll-x pb-1">';
   const filters = [
     { k: 'all', label: 'Todos', count: counts.all, color: 'bg-slate-900' },
@@ -868,7 +925,7 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.6';
+const APP_VERSION = '2.7';
 const CHANGELOG = [
   { v: '2.6', emoji: '✏️', title: 'Cadastro simplificado', items: [
     'Remoção dos templates por escola (era confuso)',
@@ -1129,6 +1186,9 @@ function setTab(t) {
   window.scrollTo(0,0);
   if (t === 'friends' || t === 'notifications' || t === 'community') {
     setTimeout(() => loadAndRender(), 50);
+  }
+  if (t === 'admin') {
+    loadAdminStats().then(() => renderShell());
   }
 }
 
