@@ -253,50 +253,6 @@ const REWARDS = [
 ];
 const EMOJIS = ['📐','📖','🔬','✝️','🌎','🏛️','🇬🇧','🎨','🎵','🏃','💻','📚'];
 const PRAYER_COLORS = ['from-pink-400 to-pink-600','from-blue-400 to-blue-600','from-emerald-400 to-emerald-600','from-amber-400 to-amber-600','from-purple-400 to-purple-600','from-rose-400 to-rose-600','from-cyan-400 to-cyan-600','from-orange-400 to-orange-600'];
-const EVAL_TYPES = [
-  { key: 'av', icon: '📝', label: 'Prova / AV' },
-  { key: 'trabalho', icon: '📚', label: 'Trabalho' },
-  { key: 'atividade', icon: '🎯', label: 'Atividade contínua' },
-  { key: 'participacao', icon: '🗣️', label: 'Participação' },
-  { key: 'projeto', icon: '🎨', label: 'Projeto' },
-  { key: 'caderno', icon: '📓', label: 'Caderno / Lição' },
-  { key: 'simulado', icon: '📊', label: 'Simulado' },
-  { key: 'recuperacao', icon: '🔄', label: 'Recuperação' },
-  { key: 'bonus', icon: '⭐', label: 'Bônus' },
-  { key: 'outro', icon: '✏️', label: 'Outro' },
-];
-const SCHOOL_TEMPLATES = {
-  adventista: { label: 'Adventista (eclass)', evals: [
-    { name: 'AV1', weight: 2, type: 'av' },
-    { name: 'AV2', weight: 3, type: 'av' },
-    { name: 'AV3', weight: 2, type: 'av' },
-    { name: 'PB1 Simulado', weight: 1, type: 'simulado' },
-    { name: 'Participação', weight: 1, type: 'participacao' },
-    { name: 'Atividade contínua', weight: 1, type: 'atividade' },
-  ]},
-  publica: { label: 'Pública (SEDUC)', evals: [
-    { name: 'Avaliação 1', weight: 3, type: 'av' },
-    { name: 'Avaliação 2', weight: 3, type: 'av' },
-    { name: 'Atividades', weight: 2, type: 'atividade' },
-    { name: 'Participação', weight: 1, type: 'participacao' },
-  ]},
-  particular: { label: 'Particular tradicional', evals: [
-    { name: 'Prova 1', weight: 3, type: 'av' },
-    { name: 'Prova 2', weight: 3, type: 'av' },
-    { name: 'Trabalho', weight: 2, type: 'trabalho' },
-    { name: 'Simulado', weight: 1, type: 'simulado' },
-    { name: 'Caderno', weight: 1, type: 'caderno' },
-  ]},
-  bilingue: { label: 'Bilíngue / Internacional', evals: [
-    { name: 'Tests', weight: 3, type: 'av' },
-    { name: 'Quizzes', weight: 1, type: 'atividade' },
-    { name: 'Homework', weight: 2, type: 'trabalho' },
-    { name: 'Projects', weight: 2, type: 'projeto' },
-    { name: 'Participation', weight: 1, type: 'participacao' },
-  ]},
-  blank: { label: 'Em branco (cadastro depois)', evals: [] },
-};
-
 const CHALLENGES_W = [
   { key: 'w_streak7', icon: '🔥', title: '7 dias de fogo', desc: 'Marque 1 hábito por dia, 7 dias seguidos', metric: 'streak', target: 7, points: 100 },
   { key: 'w_tasks5', icon: '📚', title: '5 tarefas concluídas', desc: 'Conclua 5 tarefas nesta semana', metric: 'tasks_week', target: 5, points: 80 },
@@ -378,13 +334,12 @@ const FAQS = [
 ];
 
 const TOUR_STEPS = [
-  { icon: '👋', title: 'Bem-vindo ao Conexão!', text: 'Esse é seu app pra organizar a vida escolar e espiritual em um lugar só. Vou te mostrar rapidinho o que dá pra fazer aqui.' },
-  { icon: '📊', title: 'Cadastra cada avaliação', text: 'Na aba Notas, cria a matéria e adiciona CADA avaliação separada com seu peso. Ex: Prova peso 3, Trabalho peso 1, Participação peso 1. Pergunta o peso pro seu professor se não souber. O app calcula a média ponderada certinha.' },
-  { icon: '🎯', title: 'Faltou nota? Sem problema', text: 'Se ainda não fez a prova, deixa o campo "Nota" em branco. O app vai te mostrar exatamente quanto você precisa tirar pra fechar com média 7.' },
-  { icon: '🔄', title: 'Fez recuperação? Cadastra vinculada', text: 'Quando você faz uma recuperação, marca o checkbox "Esta é uma recuperação" e escolhe qual avaliação ela substitui. O app pega automático o MAIOR valor entre a nota original e a recuperação.' },
-  { icon: '📚', title: 'Organiza tarefas', text: 'Na aba Tarefas você anota provas, trabalhos e lembretes. O app agrupa por urgência: Hoje, Esta semana, Mais pra frente. Não esquece mais nada.' },
-  { icon: '⭐', title: 'Ganha pontos com hábitos', text: 'Na aba Pontos você marca todo dia se dormiu cedo, leu a Bíblia, se exercitou. Cada hábito vale pontos. Acumula, ganha conquistas, troca por recompensas.' },
-  { icon: '🙏', title: 'Mural de oração e amigos', text: 'Compartilha pedidos, gratidões, conquistas. Adiciona colegas da mesma escola como amigos. A comunidade ora junto, celebra junto. Pode ser anônimo se quiser.' },
+  { icon: '👋', title: 'Tour rápido das notas', text: 'A galera mandou feedback que a média no app não batia com a do colégio. Quase sempre o motivo é o mesmo: faltou cadastrar tudo certinho. Vou te mostrar como evitar isso em 1 minuto.' },
+  { icon: '📚', title: 'Passo 1: cadastra a matéria', text: 'Na aba Notas, toca em + Matéria. Coloca o nome (Ex: Matemática) e, se quiser, o professor. Quando você adicionar nota nessa matéria depois, o professor já vem preenchido sozinho.' },
+  { icon: '📊', title: 'Passo 2: cadastra TODAS as avaliações', text: 'Aqui tá o segredo. Não cadastra só as provas. Cadastra também trabalhos, participação, atividades contínuas, tudo que entra no boletim. Se faltar alguma, a média do app vai ficar diferente da real.' },
+  { icon: '⚖️', title: 'Passo 3: confere o peso', text: 'Cada avaliação tem um peso. Prova vale 3, trabalho vale 1, participação vale 1, varia por colégio. Pergunta pro teu professor ou olha no boletim. Se não souber, deixa peso 1 mesmo.' },
+  { icon: '🔄', title: 'Recuperação: cadastra separado', text: 'Se você fez recuperação de uma prova, cadastra ela como uma avaliação nova (Ex: Recuperação Prova 1). Não apaga a nota antiga. O app já entende e usa a maior das duas.' },
+  { icon: '🎯', title: 'Pronto, tá tudo certo', text: 'Cadastrando assim a média do app vai bater com a do colégio. Se tiver dúvida, abre o menu Ajuda. Bora?' },
 ];
 
 let mode = 'login', currentUser = null, currentTab = 'home';
@@ -415,7 +370,6 @@ async function loadAndRender() {
     sb.from('feed_reactions').select('post_id, reaction_type').eq('user_id', currentUser.id),
   ]);
   badges = bg.data || []; feedPosts = fp.data || [];
-  if (currentUser.email === 'bruno.galvez@gmail.com') { const fbRes = await sb.from('feedback').select('*').order('created_at', { ascending: false }); adminFeedbacks = fbRes.data || []; }
   feedReactionCounts = {};
   (fr.data || []).forEach(r => { const k = r.post_id+':'+r.reaction_type; feedReactionCounts[k] = (feedReactionCounts[k]||0)+1; });
   myFeedReactions = new Set((mfr.data || []).map(r => r.post_id+':'+r.reaction_type));
@@ -439,8 +393,8 @@ async function loadAndRender() {
   profile = pf.data || null;
   currentBim = currentBim || 1;
   renderShell();
-  // Tour: dispara na primeira vez
-  if (!localStorage.getItem('tour_done') && !subjects.length && !tasks.length && !allHabits.length) {
+  // Tour: dispara na primeira vez OU pra todo mundo que ainda não viu o tour novo (v3) sobre cadastro de notas
+  if (!localStorage.getItem('tour_v3_done')) {
     setTimeout(() => openTour(0), 600);
   }
   setTimeout(notifyOverdue, 1500);
@@ -459,36 +413,20 @@ async function loadAndRender() {
 function calcMean(grades, period) {
   let g = grades || [];
   if (period) g = g.filter(x => Number(x.period || 1) === Number(period));
-  const main = g.filter(x => !x.is_recovery);
-  const recoveries = g.filter(x => x.is_recovery && x.recovers_grade_id);
-  const v = main.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
+  const v = g.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
   if (!v.length) return null;
-  let t = 0, w = 0;
-  for (const m of v) {
-    let s = Number(m.score);
-    const rec = recoveries.find(r => r.recovers_grade_id === m.id && r.score !== null && r.score !== undefined && !isNaN(Number(r.score)));
-    if (rec) s = Math.max(s, Number(rec.score));
-    t += s * Number(m.weight);
-    w += Number(m.weight);
-  }
+  const t = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
+  const w = v.reduce((s, x) => s + Number(x.weight), 0);
   return w > 0 ? t / w : null;
 }
 function calcNeeded(grades, period, target = 7) {
   let g = grades || [];
   if (period) g = g.filter(x => Number(x.period || 1) === Number(period));
-  const main = g.filter(x => !x.is_recovery);
-  const recoveries = g.filter(x => x.is_recovery && x.recovers_grade_id);
-  const v = main.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
-  const p = main.filter(x => x.score === null || x.score === undefined);
+  const v = g.filter(x => x.score !== null && x.score !== undefined && !isNaN(Number(x.score)));
+  const p = g.filter(x => x.score === null || x.score === undefined);
   if (!p.length) return null;
-  let cs = 0, vw = 0;
-  for (const m of v) {
-    let s = Number(m.score);
-    const rec = recoveries.find(r => r.recovers_grade_id === m.id && r.score !== null);
-    if (rec) s = Math.max(s, Number(rec.score));
-    cs += s * Number(m.weight);
-    vw += Number(m.weight);
-  }
+  const cs = v.reduce((s, x) => s + Number(x.score) * Number(x.weight), 0);
+  const vw = v.reduce((s, x) => s + Number(x.weight), 0);
   const pw = p.reduce((s, x) => s + Number(x.weight), 0);
   return pw > 0 ? (target * (vw + pw) - cs) / pw : null;
 }
@@ -649,119 +587,6 @@ async function shareBadge(b) {
   catch { toast(text, 'info'); }
 }
 
-
-
-function adminBtnHtml() {
-  if (!isAdmin()) return '';
-  return '<button onclick="setTab(\'admin\')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30">🛠️ Painel Admin (' + adminFeedbacks.length + ' feedbacks)</button>';
-}
-
-
-let adminStats = null;
-let adminTab = 'metrics';
-async function loadAdminStats() {
-  try {
-    const { data, error } = await sb.rpc('admin_stats');
-    if (error) { console.error('admin_stats err', error); return; }
-    adminStats = data;
-  } catch (e) { console.error(e); }
-}
-function renderAdminStats() {
-  if (!adminStats) return '<div class="text-center py-10 text-slate-500">Carregando métricas...</div>';
-  const s = adminStats;
-  const pctComplete = s.total_users > 0 ? Math.round((s.completed_profiles / s.total_users) * 100) : 0;
-  const pctSubject = s.total_users > 0 ? Math.round((s.with_subjects / s.total_users) * 100) : 0;
-  const pctGrade = s.total_users > 0 ? Math.round((s.with_grades / s.total_users) * 100) : 0;
-  const pctTask = s.total_users > 0 ? Math.round((s.with_tasks / s.total_users) * 100) : 0;
-  const pctHabit = s.total_users > 0 ? Math.round((s.with_habits / s.total_users) * 100) : 0;
-  const pctActiveToday = s.total_users > 0 ? Math.round((s.active_today / s.total_users) * 100) : 0;
-  const pctActiveWeek = s.total_users > 0 ? Math.round((s.active_week / s.total_users) * 100) : 0;
-  let html = '<div class="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-5 text-white mb-4 shadow-xl"><div class="text-xs uppercase tracking-widest opacity-90 font-bold mb-1">Total de usuários</div><div class="text-5xl font-extrabold mb-1">' + s.total_users + '</div><div class="text-xs opacity-90">' + s.completed_profiles + ' com perfil completo · ' + s.with_photo + ' com foto</div></div>';
-  html += '<div class="text-base font-bold text-slate-900 mb-2">📊 Atividade</div><div class="grid grid-cols-2 gap-3 mb-4"><div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="text-2xl font-extrabold text-emerald-600">' + s.active_today + '</div><div class="text-xs text-slate-500 font-medium mt-0.5">ativos hoje (' + pctActiveToday + '%)</div></div><div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="text-2xl font-extrabold text-blue-600">' + s.active_week + '</div><div class="text-xs text-slate-500 font-medium mt-0.5">ativos 7 dias (' + pctActiveWeek + '%)</div></div></div>';
-  html += '<div class="text-base font-bold text-slate-900 mb-2">🎯 Funil de ativação</div><div class="bg-white rounded-2xl p-4 border border-slate-100 mb-4 space-y-3">';
-  const funnel = [
-    { label: 'Cadastrou conta', value: s.total_users, pct: 100, color: 'bg-slate-700' },
-    { label: 'Completou perfil', value: s.completed_profiles, pct: pctComplete, color: 'bg-indigo-600' },
-    { label: 'Cadastrou matéria', value: s.with_subjects, pct: pctSubject, color: 'bg-blue-600' },
-    { label: 'Lançou nota', value: s.with_grades, pct: pctGrade, color: 'bg-cyan-600' },
-    { label: 'Criou tarefa', value: s.with_tasks, pct: pctTask, color: 'bg-amber-600' },
-    { label: 'Marcou hábito', value: s.with_habits, pct: pctHabit, color: 'bg-emerald-600' },
-  ];
-  for (const f of funnel) html += '<div><div class="flex justify-between text-xs font-semibold mb-1"><span class="text-slate-700">' + f.label + '</span><span class="text-slate-900">' + f.value + ' (' + f.pct + '%)</span></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ' + f.color + ' rounded-full" style="width:' + f.pct + '%"></div></div></div>';
-  html += '</div>';
-  html += '<div class="text-base font-bold text-slate-900 mb-2">📦 Volume total</div><div class="grid grid-cols-2 gap-2 mb-4">';
-  const vol = [
-    { l: 'Matérias', v: s.total_subjects, e: '📚' },
-    { l: 'Notas', v: s.total_grades, e: '📊' },
-    { l: 'Tarefas', v: s.total_tasks, e: '✅' },
-    { l: 'Hábitos', v: s.total_habits, e: '⭐' },
-    { l: 'Pedidos oração', v: s.total_prayers, e: '🙏' },
-    { l: 'Posts no feed', v: s.total_feed_posts, e: '💬' },
-    { l: 'Reações', v: s.total_reactions, e: '❤️' },
-    { l: 'Feedbacks', v: s.total_feedbacks, e: '📝' },
-  ];
-  for (const v of vol) html += '<div class="bg-white rounded-xl p-3 border border-slate-100 flex items-center gap-2"><span class="text-xl">' + v.e + '</span><div><div class="text-lg font-extrabold text-slate-900 leading-none">' + v.v + '</div><div class="text-[10px] text-slate-500 font-medium mt-0.5">' + v.l + '</div></div></div>';
-  html += '</div>';
-  if (s.schools && s.schools.length) {
-    html += '<div class="text-base font-bold text-slate-900 mb-2">🏫 Escolas</div><div class="bg-white rounded-2xl p-3 border border-slate-100 space-y-2">';
-    for (const sc of s.schools) html += '<div class="flex justify-between items-center"><span class="text-sm text-slate-700">' + escapeHtml(sc.school) + '</span><span class="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-1 rounded-full">' + sc.count + ' aluno(s)</span></div>';
-    html += '</div>';
-  }
-  return html;
-}
-
-function isAdmin() {
-  return currentUser && currentUser.email === 'bruno.galvez@gmail.com';
-}
-let adminFeedbacks = [];
-let adminFilter = 'all';
-async function loadAdminFeedbacks() {
-  const { data } = await sb.from('feedback').select('*').order('created_at', { ascending: false });
-  adminFeedbacks = data || [];
-}
-function renderAdmin() {
-  if (!isAdmin()) return '<div class="text-center py-10 text-slate-500">Acesso restrito.</div>';
-  let header = '<div class="flex items-center justify-between mb-4"><button onclick="setTab(\'profile\')" class="text-sm text-slate-500">← Voltar</button><div class="text-xl font-bold text-slate-900">🛠️ Admin</div><div></div></div>';
-  header += '<div class="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl"><button onclick="adminTab=\'metrics\'; renderShell();" class="flex-1 py-2 rounded-lg text-xs font-bold ' + (adminTab==="metrics"?"bg-white text-slate-900 shadow-sm":"text-slate-500") + '">📊 Métricas</button><button onclick="adminTab=\'feedbacks\'; renderShell();" class="flex-1 py-2 rounded-lg text-xs font-bold ' + (adminTab==="feedbacks"?"bg-white text-slate-900 shadow-sm":"text-slate-500") + '">💬 Feedbacks (' + adminFeedbacks.length + ')</button></div>';
-  if (adminTab === 'metrics') return header + renderAdminStats();
-  let html = header;
-  const filtered = adminFilter === 'all' ? adminFeedbacks : adminFeedbacks.filter(f => f.type === adminFilter);
-  const counts = {
-    all: adminFeedbacks.length,
-    bug: adminFeedbacks.filter(f => f.type === 'bug').length,
-    suggestion: adminFeedbacks.filter(f => f.type === 'suggestion').length,
-    praise: adminFeedbacks.filter(f => f.type === 'praise').length,
-    other: adminFeedbacks.filter(f => f.type === 'other').length,
-  };
-  html += '<div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 text-white mb-4"><div class="text-xs uppercase tracking-wide opacity-90">Total de feedbacks</div><div class="text-3xl font-extrabold">' + counts.all + '</div></div>';
-  html += '<div class="flex gap-2 mb-4 overflow-x-auto scroll-x pb-1">';
-  const filters = [
-    { k: 'all', label: 'Todos', count: counts.all, color: 'bg-slate-900' },
-    { k: 'bug', label: '🐛 Bug', count: counts.bug, color: 'bg-red-600' },
-    { k: 'suggestion', label: '💡 Sugestões', count: counts.suggestion, color: 'bg-amber-600' },
-    { k: 'praise', label: '❤️ Elogios', count: counts.praise, color: 'bg-pink-600' },
-    { k: 'other', label: '✏️ Outros', count: counts.other, color: 'bg-slate-600' },
-  ];
-  for (const f of filters) {
-    const active = adminFilter === f.k;
-    html += '<button onclick="adminFilter=\'' + f.k + '\'; renderShell();" class="flex-shrink-0 px-3 py-2 rounded-full text-xs font-bold ' + (active ? f.color + ' text-white' : 'bg-white border border-slate-200 text-slate-700') + '">' + f.label + ' (' + f.count + ')</button>';
-  }
-  html += '</div>';
-  if (!filtered.length) {
-    html += '<div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center"><div class="text-5xl mb-3">📭</div><div class="text-base font-semibold text-slate-900">Nenhum feedback nesse filtro</div></div>';
-  } else {
-    html += '<div class="space-y-3">';
-    for (const f of filtered) {
-      const typeLabel = f.type === 'bug' ? '🐛 BUG' : f.type === 'suggestion' ? '💡 Sugestão' : f.type === 'praise' ? '❤️ Elogio' : '✏️ Outro';
-      const typeBg = f.type === 'bug' ? 'bg-red-100 text-red-700' : f.type === 'suggestion' ? 'bg-amber-100 text-amber-700' : f.type === 'praise' ? 'bg-pink-100 text-pink-700' : 'bg-slate-100 text-slate-700';
-      const stars = f.rating ? '⭐'.repeat(f.rating) : '';
-      html += '<div class="bg-white rounded-2xl p-4 border border-slate-100"><div class="flex items-center gap-2 mb-2"><span class="text-[10px] font-bold px-2 py-1 rounded-full ' + typeBg + '">' + typeLabel + '</span>' + (stars ? '<span class="text-xs">' + stars + '</span>' : '') + '<span class="text-[10px] text-slate-400 ml-auto">' + relTime(f.created_at) + '</span></div><div class="text-sm text-slate-700 leading-relaxed mb-2 whitespace-pre-wrap">' + escapeHtml(f.message) + '</div><div class="text-[10px] text-slate-400 leading-tight">' + escapeHtml((f.user_agent||'').slice(0, 80)) + '</div></div>';
-    }
-    html += '</div>';
-  }
-  return html;
-}
-
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 6) return 'Boa madrugada';
@@ -776,7 +601,7 @@ async function markNotifsRead() {
   await sb.from('notifications').update({ read: true }).in('id', unread.map(n => n.id));
 }
 function notifIcon(type) {
-  return type === 'prayer_reaction' ? '🙏' : type === 'feed_reaction' ? '✨' : type === 'friend_request' ? '👋' : type === 'friend_accepted' ? '🎉' : type === 'feedback' ? '💬' : '🔔';
+  return type === 'prayer_reaction' ? '🙏' : type === 'feed_reaction' ? '✨' : type === 'friend_request' ? '👋' : type === 'friend_accepted' ? '🎉' : '🔔';
 }
 function renderNotifications() {
   let html = '<div class="flex items-center justify-between mb-4"><button onclick="setTab(\'home\')" class="text-sm text-slate-500">← Voltar</button><div class="text-xl font-bold text-slate-900">Notificações</div><div></div></div>';
@@ -925,30 +750,13 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.8-beta';
+const APP_VERSION = '2.3';
 const CHANGELOG = [
-  { v: '2.6', emoji: '✏️', title: 'Cadastro simplificado', items: [
-    'Remoção dos templates por escola (era confuso)',
-    'Cadastro direto de cada avaliação com nome, peso e nota',
-    'Continua suportando recuperação vinculada e tipo de avaliação',
-    'Você define totalmente a estrutura conforme sua escola',
-  ]},
-  { v: '2.5', emoji: '🛠️', title: 'Painel admin', items: [
-    'Notificação automática quando alguém manda feedback',
-    'Painel admin com filtro por tipo (bug/sugestão/elogio)',
-    'Sino mostra todos os feedbacks recebidos',
-  ]},
-  { v: '2.4', emoji: '📊', title: 'Sistema universal de avaliações', items: [
-    'Tipo de avaliação no cadastro: prova, trabalho, atividade, participação, projeto, caderno, simulado, bônus',
-    'Templates por tipo de escola: Adventista, Pública, Particular, Bilíngue ou em branco',
-    'Ao criar matéria, app sugere as avaliações que sua escola usa pra você só preencher as notas',
-    'Tour atualizado avisando: cadastra TODAS as notas que valem ponto pra média bater com o boletim',
-  ]},
-  { v: '2.3', emoji: '🔄', title: 'Recuperação de nota', items: [
-    'Agora cadastra a recuperação VINCULADA à avaliação original',
-    'O app pega automático o MAIOR valor entre as duas',
-    'Funciona pra qualquer escola que use sistema de recuperação',
-    'Tour atualizado ensinando como cadastrar certinho',
+  { v: '2.3', emoji: '🎯', title: 'Cadastro de notas mais certo', items: [
+    'Tour novo focado em como cadastrar pra média bater com a do colégio',
+    'Cadastro do professor direto na matéria (sugestão do beta tester @vasco)',
+    'Banner destacado pra quem ainda não cadastrou matéria ou avaliações',
+    'Dica: cadastra TODAS as avaliações (provas, trabalhos, participação) pra média ficar certa',
   ]},
   { v: '2.2', emoji: '🔥', title: 'Recursos virais', items: [
     'Convite com bônus mútuo (você + amigo ganham tema premium)',
@@ -1171,7 +979,6 @@ function renderShell() {
   else if (currentTab === 'faq') content = renderFAQ();
   else if (currentTab === 'friends') content = renderFriends();
   else if (currentTab === 'notifications') content = renderNotifications();
-  else if (currentTab === 'admin') content = renderAdmin();
   app.innerHTML = '<div class="min-h-screen pb-28"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-6"><div><div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">'+getGreeting()+',</div><div class="text-xl font-extrabold text-slate-900 truncate max-w-[220px] mt-0.5">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm" title="Tema">'+(getTheme()==='dark'?'☀️':'🌙')+'</button><button onclick="setTab(\'notifications\')" class="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm">🔔'+(getUnreadNotifs()>0?'<div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">'+getUnreadNotifs()+'</div>':'')+'</button><button onclick="setTab(\'profile\')" class="relative">'+avatarHtml('md')+'<div class="absolute bottom-0 right-0 w-3 h-3 '+(profileCompleteness().pct === 100 ? 'bg-green-500' : 'bg-red-500 animate-pulse')+' border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-3 left-3 right-3 z-40"><div class="max-w-md mx-auto glass rounded-3xl shadow-2xl shadow-indigo-900/10 border border-white/40 flex justify-around px-1 py-2">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div>';
 }
 function navBtn(tab, icon, label) {
@@ -1186,9 +993,6 @@ function setTab(t) {
   window.scrollTo(0,0);
   if (t === 'friends' || t === 'notifications' || t === 'community') {
     setTimeout(() => loadAndRender(), 50);
-  }
-  if (t === 'admin') {
-    loadAdminStats().then(() => renderShell());
   }
 }
 
@@ -1213,6 +1017,11 @@ function renderHome(stats) {
   }
   if (pc.pct < 100) {
     html += '<div class="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-4 text-white mb-4 anim-fade"><div class="flex items-center gap-3 mb-2"><div class="text-2xl">👤</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Complete seu perfil ('+pc.pct+'%)</div><div class="text-xs opacity-90 leading-snug">Falta: '+pc.missing.join(', ')+'</div></div><button onclick="setTab(\'profile\')" class="bg-white text-orange-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Completar</button></div><div class="h-1.5 bg-white/30 rounded-full overflow-hidden"><div class="h-full bg-white rounded-full transition-all" style="width:'+pc.pct+'%"></div></div></div>';
+  }
+  if (!subjects.length && !localStorage.getItem('hide_setup_grades')) {
+    html += '<div class="bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 rounded-2xl p-4 text-white mb-4 anim-fade shadow-lg shadow-indigo-500/30"><div class="flex items-start gap-3"><div class="text-3xl flex-shrink-0">🚀</div><div class="flex-1 min-w-0"><div class="text-sm font-bold mb-0.5">Cadastra suas notas pra começar</div><div class="text-xs opacity-95 leading-snug mb-3">Sem matéria cadastrada o app não calcula tua média. Leva 2 minutos pra montar o bimestre todo.</div><div class="flex gap-2"><button onclick="setTab(\'grades\'); openSubjectModal();" class="bg-white text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg">+ Primeira matéria</button><button onclick="openTour(0)" class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Como cadastrar</button></div></div><button onclick="dismissSetupGrades()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div></div>';
+  } else if (subjects.length && !subjects.some(s => (s.grades || []).length > 0) && !localStorage.getItem('hide_setup_evaluations')) {
+    html += '<div class="bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 rounded-2xl p-4 text-white mb-4 anim-fade shadow-lg shadow-pink-500/30"><div class="flex items-start gap-3"><div class="text-3xl flex-shrink-0">📊</div><div class="flex-1 min-w-0"><div class="text-sm font-bold mb-0.5">Falta cadastrar as avaliações</div><div class="text-xs opacity-95 leading-snug mb-3">Você criou matéria mas ainda não lançou nota. Cadastra as provas, trabalhos e participação pra ver tua média.</div><div class="flex gap-2"><button onclick="setTab(\'grades\')" class="bg-white text-rose-700 text-xs font-bold px-3 py-1.5 rounded-lg">Lançar notas</button><button onclick="openTour(0)" class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Como cadastrar</button></div></div><button onclick="dismissSetupEvals()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div></div>';
   }
   if (shouldAskFeedback()) {
     html += '<div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">💬</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">O que tá achando do app?</div><div class="text-xs opacity-90 leading-snug mt-0.5">Manda seu feedback, leva 1 minuto</div></div><button onclick="openFeedbackModal()" class="bg-white text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Avaliar</button><button onclick="dismissFeedbackBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
@@ -1513,6 +1322,14 @@ function dismissFeedbackBanner() {
   localStorage.setItem('feedback_dismissed', Date.now().toString());
   renderShell();
 }
+function dismissSetupGrades() {
+  localStorage.setItem('hide_setup_grades', '1');
+  renderShell();
+}
+function dismissSetupEvals() {
+  localStorage.setItem('hide_setup_evaluations', '1');
+  renderShell();
+}
 
 function openFeedPostModal() {
   modalEl.classList.remove('hidden');
@@ -1640,7 +1457,7 @@ function renderProfile() {
   html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Turma (opcional)</label><input id="pf_class" type="text" maxlength="5" value="'+escapeHtml(profile?.class_letter||'')+'" placeholder="Ex: 9A" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></form>';
-  html += '<div class="mt-4 space-y-2"><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="openInviteModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">🎁 Convidar amigo (+ tema premium)</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button>' + adminBtnHtml() + '<button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  html += '<div class="mt-4 space-y-2"><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="openInviteModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">🎁 Convidar amigo (+ tema premium)</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button><button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
   return html;
 }
 async function saveProfile(e) {
@@ -1673,26 +1490,27 @@ function renderFAQ() {
 
 function openTour(step) {
   const t = TOUR_STEPS[step];
-  if (!t) { closeModal(); localStorage.setItem('tour_done', '1'); return; }
+  if (!t) { closeModal(); localStorage.setItem('tour_v3_done', '1'); localStorage.setItem('tour_done', '1'); return; }
   const isLast = step === TOUR_STEPS.length - 1;
   modalEl.classList.remove('hidden');
   modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-5xl mb-4">'+t.icon+'</div><div class="text-lg font-bold text-slate-900 mb-2">'+t.title+'</div><div class="text-sm text-slate-600 leading-relaxed mb-5">'+t.text+'</div><div class="flex items-center justify-between"><div class="flex gap-1.5">'+TOUR_STEPS.map((_, i) => '<div class="w-2 h-2 rounded-full '+(i===step?'bg-blue-900':'bg-slate-200')+'"></div>').join('')+'</div><div class="flex gap-2">'+(step>0?'<button onclick="openTour('+(step-1)+')" class="text-sm font-semibold text-slate-500 px-3 py-2">Voltar</button>':'<button onclick="closeTour()" class="text-sm font-semibold text-slate-500 px-3 py-2">Pular</button>')+'<button onclick="'+(isLast?'closeTour()':'openTour('+(step+1)+')')+'" class="text-sm font-bold bg-blue-900 text-white px-5 py-2 rounded-xl">'+(isLast?'Começar':'Próximo')+'</button></div></div></div></div>';
 }
 function closeTour() {
+  localStorage.setItem('tour_v3_done', '1');
   localStorage.setItem('tour_done', '1');
   closeModal();
 }
 
 function openSubjectModal() {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div><form onsubmit="handleAddSubject(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map((e,i) => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(i===0?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+EMOJIS[0]+'"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor(a) (opcional)</label><input type="text" id="subjectTeacher" maxlength="50" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-[10px] text-slate-500 mt-1.5">Quando cadastrar notas, vai vir preenchido sozinho.</div></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Criar matéria</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div><form onsubmit="handleAddSubject(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map((e,i) => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(i===0?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+EMOJIS[0]+'"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Adicionar</button></div></form></div></div>';
   setTimeout(() => document.getElementById('subjectName').focus(), 100);
 }
 function openEditSubjectModal(id) {
   const s = subjects.find(x => x.id === id);
   if (!s) return;
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Editar matéria</div><form onsubmit="handleEditSubject(event,\''+id+'\')" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" value="'+escapeHtml(s.name)+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map(e => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(s.emoji===e?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+(s.emoji||EMOJIS[0])+'"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor(a)</label><input type="text" id="subjectTeacher" maxlength="50" value="'+escapeHtml(s.teacher_name||'')+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Editar matéria</div><form onsubmit="handleEditSubject(event,\''+id+'\')" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" value="'+escapeHtml(s.name)+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map(e => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(s.emoji===e?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+(s.emoji||EMOJIS[0])+'"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
 }
 function pickEmoji(e) {
   document.getElementById('subjectEmoji').value = e;
@@ -1700,32 +1518,24 @@ function pickEmoji(e) {
 }
 async function handleAddSubject(e) {
   e.preventDefault();
-  const teacher = document.getElementById('subjectTeacher')?.value.trim() || null;
-  const { error } = await sb.from('subjects').insert({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value, teacher_name: teacher });
+  const { error } = await sb.from('subjects').insert({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value });
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
-  toast('Matéria criada', 'success');
   closeModal(); await loadAndRender();
 }
 async function handleEditSubject(e, id) {
   e.preventDefault();
-  const teacher = document.getElementById('subjectTeacher')?.value.trim() || null;
-  const { error } = await sb.from('subjects').update({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value, teacher_name: teacher }).eq('id', id);
+  const { error } = await sb.from('subjects').update({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value }).eq('id', id);
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
   closeModal(); await loadAndRender();
 }
 
-function gradeFormHTML(prefix, g, sid) {
+function gradeFormHTML(prefix, g) {
   const isEdit = !!g;
-  const subj = subjects.find(s => s.id === sid) || (isEdit ? subjects.find(s => (s.grades||[]).some(x => x.id === g.id)) : null);
-  const defaultTeacher = (isEdit && g.teacher_name) ? g.teacher_name : (subj && subj.teacher_name ? subj.teacher_name : '');
-  const otherGrades = subj ? (subj.grades||[]).filter(x => !x.is_recovery && (!isEdit || x.id !== g.id)) : [];
-  const recoptions = otherGrades.map(x => '<option value="'+x.id+'" '+(isEdit && g.recovers_grade_id===x.id?'selected':'')+'>'+escapeHtml(x.evaluation_name)+' (peso '+x.weight+(x.score!==null?', nota '+fmt(x.score):'')+')</option>').join('');
-  let typeOpts = ''; for (const t of EVAL_TYPES) typeOpts += '<option value="' + t.key + '" ' + (((isEdit ? g.eval_type : 'av') === t.key) ? 'selected' : '') + '>' + t.icon + ' ' + t.label + '</option>';
-  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Tipo</label><select id="'+prefix+'Type" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">' + typeOpts + '</select></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="'+prefix+'Name" required maxlength="40" value="'+(isEdit?escapeHtml(g.evaluation_name):'')+'" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="'+prefix+'Weight" required min="1" max="10" step="1" value="'+(isEdit?g.weight:'1')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Bimestre</label><select id="'+prefix+'Period" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">'+[1,2,3,4].map(b => '<option value="'+b+'" '+((isEdit?(g.period||1):currentBim)===b?'selected':'')+'>'+b+'º bim</option>').join('')+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="'+prefix+'Score" min="0" max="10" step="0.1" value="'+(isEdit&&g.score!==null?g.score:'')+'" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="'+prefix+'Date" value="'+(isEdit&&g.evaluation_date?g.evaluation_date:'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor (opcional)</label><input type="text" id="'+prefix+'Teacher" maxlength="50" value="'+escapeHtml(defaultTeacher)+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>'+(otherGrades.length>0?'<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-2"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="'+prefix+'IsRec" '+(isEdit&&g.is_recovery?'checked':'')+' onchange="document.getElementById(\''+prefix+'RecOf\').classList.toggle(\'hidden\', !this.checked)" class="w-4 h-4"><span class="text-xs text-slate-700 dark:text-slate-200 font-semibold">Esta é uma recuperação</span></label><div id="'+prefix+'RecOf" class="'+(isEdit&&g.is_recovery?'':'hidden')+'"><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Substitui qual avaliação? (se nota for maior)</label><select id="'+prefix+'RecGrade" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white"><option value="">Selecione...</option>'+recoptions+'</select><div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">A nota da recuperação só conta se for maior que a original. Funciona pra qualquer escola que use sistema de recuperação.</div></div></div>':'');
+  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="'+prefix+'Name" required maxlength="40" value="'+(isEdit?escapeHtml(g.evaluation_name):'')+'" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="'+prefix+'Weight" required min="1" max="10" step="1" value="'+(isEdit?g.weight:'1')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Bimestre</label><select id="'+prefix+'Period" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">'+[1,2,3,4].map(b => '<option value="'+b+'" '+((isEdit?(g.period||1):currentBim)===b?'selected':'')+'>'+b+'º bim</option>').join('')+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="'+prefix+'Score" min="0" max="10" step="0.1" value="'+(isEdit&&g.score!==null?g.score:'')+'" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="'+prefix+'Date" value="'+(isEdit&&g.evaluation_date?g.evaluation_date:'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor (opcional)</label><input type="text" id="'+prefix+'Teacher" maxlength="50" value="'+(isEdit&&g.teacher_name?escapeHtml(g.teacher_name):'')+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
 }
 function openGradeModal(sid) {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div><form onsubmit="handleAddGrade(event,\''+sid+'\')" class="space-y-4">'+gradeFormHTML('grade', null, sid)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Adicionar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Nova avaliação</div><form onsubmit="handleAddGrade(event,\''+sid+'\')" class="space-y-4">'+gradeFormHTML('grade', null)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Adicionar</button></div></form></div></div>';
   setTimeout(() => document.getElementById('gradeName').focus(), 100);
 }
 function openEditGradeModal(id) {
@@ -1733,18 +1543,12 @@ function openEditGradeModal(id) {
   for (const s of subjects) { const x = (s.grades||[]).find(y => y.id === id); if (x) { g = x; break; } }
   if (!g) return;
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Editar avaliação</div><form onsubmit="handleEditGrade(event,\''+id+'\')" class="space-y-4">'+gradeFormHTML('grade', g, g.subject_id || (subjects.find(s => (s.grades||[]).some(x => x.id===g.id))||{}).id)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up max-h-[90vh] overflow-y-auto"><div class="text-base font-bold text-slate-900 mb-4">Editar avaliação</div><form onsubmit="handleEditGrade(event,\''+id+'\')" class="space-y-4">'+gradeFormHTML('grade', g)+'<div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
 }
 function readGradeForm(prefix) {
   const sv = document.getElementById(prefix+'Score').value;
   const dv = document.getElementById(prefix+'Date').value;
   const tv = document.getElementById(prefix+'Teacher').value.trim();
-  const recCheck = document.getElementById(prefix+'IsRec');
-  const isRec = recCheck ? recCheck.checked : false;
-  const recOfEl = document.getElementById(prefix+'RecGrade');
-  const recOf = (isRec && recOfEl && recOfEl.value) ? recOfEl.value : null;
-  const typeEl = document.getElementById(prefix+'Type');
-  const evalType = typeEl ? typeEl.value : (isRec ? 'recuperacao' : 'av');
   return {
     evaluation_name: document.getElementById(prefix+'Name').value.trim(),
     weight: Number(document.getElementById(prefix+'Weight').value),
@@ -1752,9 +1556,6 @@ function readGradeForm(prefix) {
     score: sv === '' ? null : Number(sv),
     evaluation_date: dv === '' ? null : dv,
     teacher_name: tv || null,
-    eval_type: isRec ? 'recuperacao' : evalType,
-    is_recovery: isRec && !!recOf,
-    recovers_grade_id: recOf,
   };
 }
 async function handleAddGrade(e, sid) {
