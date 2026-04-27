@@ -378,13 +378,12 @@ const FAQS = [
 ];
 
 const TOUR_STEPS = [
-  { icon: '👋', title: 'Bem-vindo ao Conexão!', text: 'Esse é seu app pra organizar a vida escolar e espiritual em um lugar só. Vou te mostrar rapidinho o que dá pra fazer aqui.' },
-  { icon: '📊', title: 'Cadastra cada avaliação', text: 'Na aba Notas, cria a matéria e adiciona CADA avaliação separada com seu peso. Ex: Prova peso 3, Trabalho peso 1, Participação peso 1. Pergunta o peso pro seu professor se não souber. O app calcula a média ponderada certinha.' },
-  { icon: '🎯', title: 'Faltou nota? Sem problema', text: 'Se ainda não fez a prova, deixa o campo "Nota" em branco. O app vai te mostrar exatamente quanto você precisa tirar pra fechar com média 7.' },
-  { icon: '🔄', title: 'Fez recuperação? Cadastra vinculada', text: 'Quando você faz uma recuperação, marca o checkbox "Esta é uma recuperação" e escolhe qual avaliação ela substitui. O app pega automático o MAIOR valor entre a nota original e a recuperação.' },
-  { icon: '📚', title: 'Organiza tarefas', text: 'Na aba Tarefas você anota provas, trabalhos e lembretes. O app agrupa por urgência: Hoje, Esta semana, Mais pra frente. Não esquece mais nada.' },
-  { icon: '⭐', title: 'Ganha pontos com hábitos', text: 'Na aba Pontos você marca todo dia se dormiu cedo, leu a Bíblia, se exercitou. Cada hábito vale pontos. Acumula, ganha conquistas, troca por recompensas.' },
-  { icon: '🙏', title: 'Mural de oração e amigos', text: 'Compartilha pedidos, gratidões, conquistas. Adiciona colegas da mesma escola como amigos. A comunidade ora junto, celebra junto. Pode ser anônimo se quiser.' },
+  { icon: '👋', title: 'Tour rápido das notas', text: 'A galera mandou feedback que a média no app não batia com a do colégio. Quase sempre o motivo é o mesmo: faltou cadastrar tudo certinho. Vou te mostrar como evitar isso em 1 minuto.' },
+  { icon: '📚', title: 'Passo 1: cadastra a matéria', text: 'Na aba Notas, toca em + Matéria. Coloca o nome (Ex: Matemática) e, se quiser, o professor. Quando você adicionar nota nessa matéria depois, o professor já vem preenchido sozinho.' },
+  { icon: '📊', title: 'Passo 2: cadastra TODAS as avaliações', text: 'Aqui tá o segredo. Não cadastra só as provas. Cadastra também trabalhos, participação, atividades contínuas, tudo que entra no boletim. Se faltar alguma, a média do app vai ficar diferente da real.' },
+  { icon: '⚖️', title: 'Passo 3: confere o peso', text: 'Cada avaliação tem um peso. Prova vale 3, trabalho vale 1, participação vale 1, varia por colégio. Pergunta pro teu professor ou olha no boletim. Se não souber, deixa peso 1 mesmo.' },
+  { icon: '🔄', title: 'Recuperação: edita a prova antiga', text: 'Se fez recuperação e foi melhor, abre a nota antiga e troca pelo valor maior. Não cadastra a recuperação como avaliação nova, senão o app conta as duas e tua média fica errada.' },
+  { icon: '🎯', title: 'Pronto, tá tudo certo', text: 'Cadastrando assim a média do app vai bater com a do colégio. Se tiver dúvida, abre o menu Ajuda. Bora?' },
 ];
 
 let mode = 'login', currentUser = null, currentTab = 'home';
@@ -439,9 +438,10 @@ async function loadAndRender() {
   profile = pf.data || null;
   currentBim = currentBim || 1;
   renderShell();
-  // Tour: dispara na primeira vez
-  if (!localStorage.getItem('tour_done') && !subjects.length && !tasks.length && !allHabits.length) {
-    setTimeout(() => openTour(0), 600);
+  // Tour: dispara pra todo mundo que ainda não viu o tour novo (v3)
+  // Espera os outros modais (whatsNew, dailyBox) terminarem pra não sobrescrever
+  if (!localStorage.getItem('tour_v3_done')) {
+    setTimeout(tryOpenTourV3, 4000);
   }
   setTimeout(notifyOverdue, 1500);
   setTimeout(checkBadges, 800);
@@ -925,8 +925,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.7';
+const APP_VERSION = '2.9-beta';
 const CHANGELOG = [
+  { v: '2.9-beta', emoji: '🎯', title: 'Cadastro de notas mais certo', items: [
+    'Tour novo focado em como cadastrar pra média bater com a do colégio',
+    'Banner destacado pra quem ainda não cadastrou matéria ou avaliações',
+    'Tour aparece pra todos (não só novos) pra reforçar boas práticas',
+    'Tour atrasado pra não atropelar outros avisos',
+  ]},
   { v: '2.6', emoji: '✏️', title: 'Cadastro simplificado', items: [
     'Remoção dos templates por escola (era confuso)',
     'Cadastro direto de cada avaliação com nome, peso e nota',
@@ -1213,6 +1219,11 @@ function renderHome(stats) {
   }
   if (pc.pct < 100) {
     html += '<div class="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-4 text-white mb-4 anim-fade"><div class="flex items-center gap-3 mb-2"><div class="text-2xl">👤</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">Complete seu perfil ('+pc.pct+'%)</div><div class="text-xs opacity-90 leading-snug">Falta: '+pc.missing.join(', ')+'</div></div><button onclick="setTab(\'profile\')" class="bg-white text-orange-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Completar</button></div><div class="h-1.5 bg-white/30 rounded-full overflow-hidden"><div class="h-full bg-white rounded-full transition-all" style="width:'+pc.pct+'%"></div></div></div>';
+  }
+  if (!subjects.length && !localStorage.getItem('hide_setup_grades')) {
+    html += '<div class="bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 rounded-2xl p-4 text-white mb-4 anim-fade shadow-lg shadow-indigo-500/30"><div class="flex items-start gap-3"><div class="text-3xl flex-shrink-0">🚀</div><div class="flex-1 min-w-0"><div class="text-sm font-bold mb-0.5">Cadastra suas notas pra começar</div><div class="text-xs opacity-95 leading-snug mb-3">Sem matéria cadastrada o app não calcula tua média. Leva 2 minutos pra montar o bimestre todo.</div><div class="flex gap-2"><button onclick="setTab(\'grades\'); openSubjectModal();" class="bg-white text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg">+ Primeira matéria</button><button onclick="openTour(0)" class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Como cadastrar</button></div></div><button onclick="dismissSetupGrades()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div></div>';
+  } else if (subjects.length && !subjects.some(s => (s.grades || []).length > 0) && !localStorage.getItem('hide_setup_evaluations')) {
+    html += '<div class="bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 rounded-2xl p-4 text-white mb-4 anim-fade shadow-lg shadow-pink-500/30"><div class="flex items-start gap-3"><div class="text-3xl flex-shrink-0">📊</div><div class="flex-1 min-w-0"><div class="text-sm font-bold mb-0.5">Falta cadastrar as avaliações</div><div class="text-xs opacity-95 leading-snug mb-3">Você criou matéria mas ainda não lançou nota. Cadastra as provas, trabalhos e participação pra ver tua média.</div><div class="flex gap-2"><button onclick="setTab(\'grades\')" class="bg-white text-rose-700 text-xs font-bold px-3 py-1.5 rounded-lg">Lançar notas</button><button onclick="openTour(0)" class="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Como cadastrar</button></div></div><button onclick="dismissSetupEvals()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div></div>';
   }
   if (shouldAskFeedback()) {
     html += '<div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 text-white mb-4 anim-fade flex items-center gap-3"><div class="text-3xl flex-shrink-0">💬</div><div class="flex-1 min-w-0"><div class="text-sm font-bold">O que tá achando do app?</div><div class="text-xs opacity-90 leading-snug mt-0.5">Manda seu feedback, leva 1 minuto</div></div><button onclick="openFeedbackModal()" class="bg-white text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg flex-shrink-0">Avaliar</button><button onclick="dismissFeedbackBanner()" class="text-white/70 hover:text-white text-lg leading-none px-1">×</button></div>';
@@ -1513,6 +1524,14 @@ function dismissFeedbackBanner() {
   localStorage.setItem('feedback_dismissed', Date.now().toString());
   renderShell();
 }
+function dismissSetupGrades() {
+  localStorage.setItem('hide_setup_grades', '1');
+  renderShell();
+}
+function dismissSetupEvals() {
+  localStorage.setItem('hide_setup_evaluations', '1');
+  renderShell();
+}
 
 function openFeedPostModal() {
   modalEl.classList.remove('hidden');
@@ -1673,26 +1692,35 @@ function renderFAQ() {
 
 function openTour(step) {
   const t = TOUR_STEPS[step];
-  if (!t) { closeModal(); localStorage.setItem('tour_done', '1'); return; }
+  if (!t) { closeModal(); localStorage.setItem('tour_v3_done', '1'); localStorage.setItem('tour_done', '1'); return; }
   const isLast = step === TOUR_STEPS.length - 1;
   modalEl.classList.remove('hidden');
   modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-5xl mb-4">'+t.icon+'</div><div class="text-lg font-bold text-slate-900 mb-2">'+t.title+'</div><div class="text-sm text-slate-600 leading-relaxed mb-5">'+t.text+'</div><div class="flex items-center justify-between"><div class="flex gap-1.5">'+TOUR_STEPS.map((_, i) => '<div class="w-2 h-2 rounded-full '+(i===step?'bg-blue-900':'bg-slate-200')+'"></div>').join('')+'</div><div class="flex gap-2">'+(step>0?'<button onclick="openTour('+(step-1)+')" class="text-sm font-semibold text-slate-500 px-3 py-2">Voltar</button>':'<button onclick="closeTour()" class="text-sm font-semibold text-slate-500 px-3 py-2">Pular</button>')+'<button onclick="'+(isLast?'closeTour()':'openTour('+(step+1)+')')+'" class="text-sm font-bold bg-blue-900 text-white px-5 py-2 rounded-xl">'+(isLast?'Começar':'Próximo')+'</button></div></div></div></div>';
 }
 function closeTour() {
+  localStorage.setItem('tour_v3_done', '1');
   localStorage.setItem('tour_done', '1');
   closeModal();
+}
+function tryOpenTourV3() {
+  if (localStorage.getItem('tour_v3_done')) return;
+  if (modalEl && !modalEl.classList.contains('hidden')) {
+    setTimeout(tryOpenTourV3, 2500);
+    return;
+  }
+  openTour(0);
 }
 
 function openSubjectModal() {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div><form onsubmit="handleAddSubject(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map((e,i) => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(i===0?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+EMOJIS[0]+'"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Criar matéria</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Nova matéria</div><form onsubmit="handleAddSubject(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" placeholder="Ex: Matemática" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map((e,i) => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(i===0?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+EMOJIS[0]+'"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor(a) (opcional)</label><input type="text" id="subjectTeacher" maxlength="50" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-[10px] text-slate-500 mt-1.5">Quando cadastrar notas, vai vir preenchido sozinho.</div></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Criar matéria</button></div></form></div></div>';
   setTimeout(() => document.getElementById('subjectName').focus(), 100);
 }
 function openEditSubjectModal(id) {
   const s = subjects.find(x => x.id === id);
   if (!s) return;
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Editar matéria</div><form onsubmit="handleEditSubject(event,\''+id+'\')" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" value="'+escapeHtml(s.name)+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map(e => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(s.emoji===e?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+(s.emoji||EMOJIS[0])+'"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-base font-bold text-slate-900 mb-4">Editar matéria</div><form onsubmit="handleEditSubject(event,\''+id+'\')" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="subjectName" required maxlength="40" value="'+escapeHtml(s.name)+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><div class="grid grid-cols-6 gap-2" id="emojiPicker">'+EMOJIS.map(e => '<button type="button" data-emoji="'+e+'" onclick="pickEmoji(\''+e+'\')" class="aspect-square text-2xl rounded-xl border '+(s.emoji===e?'border-blue-700 bg-blue-50':'border-slate-200')+'">'+e+'</button>').join('')+'</div><input type="hidden" id="subjectEmoji" value="'+(s.emoji||EMOJIS[0])+'"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor(a)</label><input type="text" id="subjectTeacher" maxlength="50" value="'+escapeHtml(s.teacher_name||'')+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></div></form></div></div>';
 }
 function pickEmoji(e) {
   document.getElementById('subjectEmoji').value = e;
@@ -1700,14 +1728,16 @@ function pickEmoji(e) {
 }
 async function handleAddSubject(e) {
   e.preventDefault();
-  const { error } = await sb.from('subjects').insert({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value });
+  const teacher = document.getElementById('subjectTeacher')?.value.trim() || null;
+  const { error } = await sb.from('subjects').insert({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value, teacher_name: teacher });
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
   toast('Matéria criada', 'success');
   closeModal(); await loadAndRender();
 }
 async function handleEditSubject(e, id) {
   e.preventDefault();
-  const { error } = await sb.from('subjects').update({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value }).eq('id', id);
+  const teacher = document.getElementById('subjectTeacher')?.value.trim() || null;
+  const { error } = await sb.from('subjects').update({ name: document.getElementById('subjectName').value.trim(), emoji: document.getElementById('subjectEmoji').value, teacher_name: teacher }).eq('id', id);
   if (error) { toast('Erro: ' + error.message, 'error'); return; }
   closeModal(); await loadAndRender();
 }
@@ -1715,10 +1745,11 @@ async function handleEditSubject(e, id) {
 function gradeFormHTML(prefix, g, sid) {
   const isEdit = !!g;
   const subj = subjects.find(s => s.id === sid) || (isEdit ? subjects.find(s => (s.grades||[]).some(x => x.id === g.id)) : null);
+  const defaultTeacher = (isEdit && g.teacher_name) ? g.teacher_name : (subj && subj.teacher_name ? subj.teacher_name : '');
   const otherGrades = subj ? (subj.grades||[]).filter(x => !x.is_recovery && (!isEdit || x.id !== g.id)) : [];
   const recoptions = otherGrades.map(x => '<option value="'+x.id+'" '+(isEdit && g.recovers_grade_id===x.id?'selected':'')+'>'+escapeHtml(x.evaluation_name)+' (peso '+x.weight+(x.score!==null?', nota '+fmt(x.score):'')+')</option>').join('');
   let typeOpts = ''; for (const t of EVAL_TYPES) typeOpts += '<option value="' + t.key + '" ' + (((isEdit ? g.eval_type : 'av') === t.key) ? 'selected' : '') + '>' + t.icon + ' ' + t.label + '</option>';
-  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Tipo</label><select id="'+prefix+'Type" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">' + typeOpts + '</select></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="'+prefix+'Name" required maxlength="40" value="'+(isEdit?escapeHtml(g.evaluation_name):'')+'" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="'+prefix+'Weight" required min="1" max="10" step="1" value="'+(isEdit?g.weight:'1')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Bimestre</label><select id="'+prefix+'Period" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">'+[1,2,3,4].map(b => '<option value="'+b+'" '+((isEdit?(g.period||1):currentBim)===b?'selected':'')+'>'+b+'º bim</option>').join('')+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="'+prefix+'Score" min="0" max="10" step="0.1" value="'+(isEdit&&g.score!==null?g.score:'')+'" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="'+prefix+'Date" value="'+(isEdit&&g.evaluation_date?g.evaluation_date:'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor (opcional)</label><input type="text" id="'+prefix+'Teacher" maxlength="50" value="'+(isEdit&&g.teacher_name?escapeHtml(g.teacher_name):'')+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>'+(otherGrades.length>0?'<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-2"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="'+prefix+'IsRec" '+(isEdit&&g.is_recovery?'checked':'')+' onchange="document.getElementById(\''+prefix+'RecOf\').classList.toggle(\'hidden\', !this.checked)" class="w-4 h-4"><span class="text-xs text-slate-700 dark:text-slate-200 font-semibold">Esta é uma recuperação</span></label><div id="'+prefix+'RecOf" class="'+(isEdit&&g.is_recovery?'':'hidden')+'"><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Substitui qual avaliação? (se nota for maior)</label><select id="'+prefix+'RecGrade" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white"><option value="">Selecione...</option>'+recoptions+'</select><div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">A nota da recuperação só conta se for maior que a original. Funciona pra qualquer escola que use sistema de recuperação.</div></div></div>':'');
+  return '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Tipo</label><select id="'+prefix+'Type" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">' + typeOpts + '</select></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome</label><input type="text" id="'+prefix+'Name" required maxlength="40" value="'+(isEdit?escapeHtml(g.evaluation_name):'')+'" placeholder="Ex: Prova 1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Peso</label><input type="number" id="'+prefix+'Weight" required min="1" max="10" step="1" value="'+(isEdit?g.weight:'1')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Bimestre</label><select id="'+prefix+'Period" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white">'+[1,2,3,4].map(b => '<option value="'+b+'" '+((isEdit?(g.period||1):currentBim)===b?'selected':'')+'>'+b+'º bim</option>').join('')+'</select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Nota (opcional)</label><input type="number" id="'+prefix+'Score" min="0" max="10" step="0.1" value="'+(isEdit&&g.score!==null?g.score:'')+'" placeholder="Ex: 8,5" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Data (opcional)</label><input type="date" id="'+prefix+'Date" value="'+(isEdit&&g.evaluation_date?g.evaluation_date:'')+'" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Professor (opcional)</label><input type="text" id="'+prefix+'Teacher" maxlength="50" value="'+escapeHtml(defaultTeacher)+'" placeholder="Ex: Prof. Daniela" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>'+(otherGrades.length>0?'<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-2"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="'+prefix+'IsRec" '+(isEdit&&g.is_recovery?'checked':'')+' onchange="document.getElementById(\''+prefix+'RecOf\').classList.toggle(\'hidden\', !this.checked)" class="w-4 h-4"><span class="text-xs text-slate-700 dark:text-slate-200 font-semibold">Esta é uma recuperação</span></label><div id="'+prefix+'RecOf" class="'+(isEdit&&g.is_recovery?'':'hidden')+'"><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Substitui qual avaliação? (se nota for maior)</label><select id="'+prefix+'RecGrade" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white"><option value="">Selecione...</option>'+recoptions+'</select><div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">A nota da recuperação só conta se for maior que a original. Funciona pra qualquer escola que use sistema de recuperação.</div></div></div>':'');
 }
 function openGradeModal(sid) {
   modalEl.classList.remove('hidden');
