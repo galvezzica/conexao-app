@@ -378,13 +378,13 @@ const FAQS = [
 ];
 
 const TOUR_STEPS = [
-  { tab: null, target: null, title: 'E aí, beleza?', text: 'Sou o Conex, vou te ensinar a usar o app em 1 minuto. Bora?' },
-  { tab: null, target: null, title: 'O que dá pra fazer', text: 'Aqui dá pra acompanhar tuas notas, tarefas, hábitos e ainda conectar com a galera da tua escola. Vou focar no mais importante: as notas.' },
-  { tab: 'grades', target: '[data-tour="add-subject-btn"]', title: 'Cadastra a matéria', text: 'Toca em + Matéria. Coloca o nome e, se quiser, o professor. Quando cadastrar nota depois, o professor vem preenchido sozinho.' },
-  { tab: 'grades', target: null, title: 'Cadastra TODAS as avaliações', text: 'Não cadastra só as provas. Trabalhos, participação, atividade contínua, TUDO que entra no boletim. Senão tua média no app não bate com a real.' },
-  { tab: 'grades', target: null, title: 'Cuidado com o peso', text: 'Peso NÃO é o valor da prova. É só o multiplicador. Prova vale peso 3, trabalho peso 1. A nota tu coloca como veio do professor.' },
-  { tab: 'grades', target: null, title: 'Recuperação', text: 'Se fez recuperação e foi melhor, abre a nota antiga e troca pelo valor maior. Não cria avaliação nova, senão o app conta as duas.' },
-  { tab: null, target: null, title: 'Pronto!', text: 'Cadastrando assim, tua média no app vai bater com a do colégio. Tô sempre aqui no perfil se quiser rever. Bora?' },
+  { tab: null, target: null, title: 'E aí, mano!', text: 'Sou o Conex 🦊, raposa esperta que vai te ensinar a usar essa parada. Bora dar um rolê?' },
+  { tab: null, target: '[data-tour="nav-grades"]', title: 'Saca só as abas', text: 'Tá vendo essa barrinha embaixo? Cada ícone é uma parte do app. Toca em Notas aí pra começar.' },
+  { tab: 'grades', target: '[data-tour="add-subject-btn"]', title: 'Bora cadastrar', text: 'Aperta esse + Matéria aqui. É onde você adiciona Matemática, História, essas coisas que a escola te empurra.' },
+  { tab: 'grades', target: null, title: 'Ó o esquema, mano', text: 'Cadastra TUDO que entra no boletim. Prova, trabalho, participação, atividade contínua. Se faltar alguma, a média fica 6 7 (mais ou menos) com a do colégio.' },
+  { tab: 'grades', target: null, title: 'Peso ≠ valor da prova', text: 'Mano, isso pega muita gente: peso NÃO é o quanto a prova vale. É só o multiplicador da média. Prova vale peso 3, trabalho peso 1. A nota você bota igual o professor mandou.' },
+  { tab: 'grades', target: null, title: 'Recuperação? Edita a antiga', text: 'Tirou nota ruim e fez recuperação melhor? Só clica na nota antiga e troca pelo valor maior. Não cria avaliação nova, senão o app conta as duas e a conta fica esquisita.' },
+  { tab: null, target: '[data-tour="conex-fab"]', title: 'Tamo junto!', text: 'Travou em algo? Me chama nesse botão laranja flutuante. Tô sempre aqui pra te ajudar. Bora arrebentar nesse bimestre?' },
 ];
 
 let mode = 'login', currentUser = null, currentTab = 'home';
@@ -933,8 +933,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.12';
+const APP_VERSION = '2.14';
 const CHANGELOG = [
+  { v: '2.14', emoji: '🦊', title: 'Conex sempre por perto', items: [
+    'Botão laranja flutuante: chama o Conex em qualquer tela',
+    'Conex te dá 3 opções: tour, dúvidas, feedback',
+    'Tour novo com linguagem da galera (jeito raposa esperta)',
+    'Tour aponta abas, botão + Matéria e o próprio Conex',
+  ]},
   { v: '2.12', emoji: '📖', title: 'Cuidado com peso vs nota', items: [
     'Tour reforça que peso NÃO é o valor da prova, é só multiplicador',
     'FAQ atualizado pra evitar confusão',
@@ -1216,12 +1222,12 @@ function renderShell() {
   else if (currentTab === 'friends') content = renderFriends();
   else if (currentTab === 'notifications') content = renderNotifications();
   else if (currentTab === 'admin') content = renderAdmin();
-  app.innerHTML = '<div class="min-h-screen pb-28"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-6"><div><div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">'+getGreeting()+',</div><div class="text-xl font-extrabold text-slate-900 truncate max-w-[220px] mt-0.5">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm" title="Tema">'+(getTheme()==='dark'?'☀️':'🌙')+'</button><button onclick="setTab(\'notifications\')" class="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm">🔔'+(getUnreadNotifs()>0?'<div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">'+getUnreadNotifs()+'</div>':'')+'</button><button onclick="setTab(\'profile\')" class="relative">'+avatarHtml('md')+'<div class="absolute bottom-0 right-0 w-3 h-3 '+(profileCompleteness().pct === 100 ? 'bg-green-500' : 'bg-red-500 animate-pulse')+' border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-3 left-3 right-3 z-40"><div class="max-w-md mx-auto glass rounded-3xl shadow-2xl shadow-indigo-900/10 border border-white/40 flex justify-around px-1 py-2">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div>';
+  app.innerHTML = '<div class="min-h-screen pb-28"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-6"><div><div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">'+getGreeting()+',</div><div class="text-xl font-extrabold text-slate-900 truncate max-w-[220px] mt-0.5">'+escapeHtml(userName())+'</div></div><div class="flex items-center gap-2"><button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm" title="Tema">'+(getTheme()==='dark'?'☀️':'🌙')+'</button><button onclick="setTab(\'notifications\')" class="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm">🔔'+(getUnreadNotifs()>0?'<div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">'+getUnreadNotifs()+'</div>':'')+'</button><button onclick="setTab(\'profile\')" class="relative">'+avatarHtml('md')+'<div class="absolute bottom-0 right-0 w-3 h-3 '+(profileCompleteness().pct === 100 ? 'bg-green-500' : 'bg-red-500 animate-pulse')+' border-2 border-white rounded-full"></div></button></div></div>'+content+'</div></div><div class="fixed bottom-3 left-3 right-3 z-40"><div class="max-w-md mx-auto glass rounded-3xl shadow-2xl shadow-indigo-900/10 border border-white/40 flex justify-around px-1 py-2">'+navBtn('home','🏠','Início')+navBtn('tasks','📚','Tarefas')+navBtn('grades','📊','Notas')+navBtn('points','⭐','Pontos')+navBtn('community','💬','Comunidade')+'</div></div><button data-tour="conex-fab" onclick="openConexMenu()" class="fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 shadow-2xl shadow-orange-500/50 flex items-center justify-center text-2xl border-2 border-white hover:scale-110 transition" style="animation: tourBounce 3s ease-in-out infinite;" title="Fala com o Conex">🦊</button>';
 }
 function navBtn(tab, icon, label) {
   const active = currentTab === tab;
   const cls = active ? 'bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-500';
-  return '<button onclick="setTab(\''+tab+'\')" class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition '+cls+'"><div class="text-lg">'+icon+'</div><div class="text-[9px] font-bold uppercase tracking-wide">'+label+'</div></button>';
+  return '<button data-tour="nav-'+tab+'" onclick="setTab(\''+tab+'\')" class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition '+cls+'"><div class="text-lg">'+icon+'</div><div class="text-[9px] font-bold uppercase tracking-wide">'+label+'</div></button>';
 }
 function setTab(t) {
   currentTab = t;
@@ -1808,6 +1814,10 @@ function tryOpenTourV3() {
     return;
   }
   openTour(0);
+}
+function openConexMenu() {
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up"><div class="flex items-center gap-3 mb-4"><div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-3xl shadow-lg" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div><div class="text-[10px] uppercase tracking-widest font-bold text-orange-600">Conex</div><div class="text-base font-bold text-slate-900">E aí, no que dá pra te ajudar?</div></div></div><div class="space-y-2"><button onclick="closeModal(); openTour(0);" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4 shadow-md shadow-orange-500/30"><span class="text-xl">🎬</span><div class="text-left flex-1"><div>Ver o tour de novo</div><div class="text-[10px] font-normal opacity-90">A explicação completa do app</div></div></button><button onclick="closeModal(); setTab(\'faq\');" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">❓</span><div class="text-left flex-1"><div>Dúvidas frequentes</div><div class="text-[10px] font-normal text-slate-400">Pergunta comum dos manos</div></div></button><button onclick="closeModal(); openFeedbackModal();" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">💬</span><div class="text-left flex-1"><div>Mandar feedback ou bug</div><div class="text-[10px] font-normal text-slate-400">Achou algo estranho? Me conta</div></div></button><button onclick="closeModal();" class="w-full bg-slate-100 text-slate-600 font-semibold py-2.5 rounded-xl text-sm mt-3">Fechar</button></div></div></div>';
 }
 async function maybeConsumeShield() {
   const stats = getStats();
