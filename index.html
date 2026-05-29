@@ -933,8 +933,15 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.14';
+const APP_VERSION = '2.15';
 const CHANGELOG = [
+  { v: '2.15', emoji: '🤖', title: 'Chat com o Conex (IA)', items: [
+    'Conversa real com a raposa: tira dúvidas de matéria, recebe motivação',
+    'Conex cria lembretes pra você dentro do app',
+    'Quiz interativo de revisão (Conex gera as perguntas)',
+    'Vê tuas médias e te dá conselho personalizado',
+    'Limite de 20 mensagens por dia (grátis)',
+  ]},
   { v: '2.14', emoji: '🦊', title: 'Conex sempre por perto', items: [
     'Botão laranja flutuante: chama o Conex em qualquer tela',
     'Conex te dá 3 opções: tour, dúvidas, feedback',
@@ -1815,10 +1822,189 @@ function tryOpenTourV3() {
   }
   openTour(0);
 }
-function openConexMenu() {
+function openConexMenu() { openConexChat(); }
+let conexState = { messages: [], loading: false, usage: { used: 0, limit: 20 }, ready: false };
+async function openConexChat() {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up"><div class="flex items-center gap-3 mb-4"><div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-3xl shadow-lg" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div><div class="text-[10px] uppercase tracking-widest font-bold text-orange-600">Conex</div><div class="text-base font-bold text-slate-900">E aí, no que dá pra te ajudar?</div></div></div><div class="space-y-2"><button onclick="closeModal(); openTour(0);" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4 shadow-md shadow-orange-500/30"><span class="text-xl">🎬</span><div class="text-left flex-1"><div>Ver o tour de novo</div><div class="text-[10px] font-normal opacity-90">A explicação completa do app</div></div></button><button onclick="closeModal(); setTab(\'faq\');" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">❓</span><div class="text-left flex-1"><div>Dúvidas frequentes</div><div class="text-[10px] font-normal text-slate-400">Pergunta comum dos manos</div></div></button><button onclick="closeModal(); openFeedbackModal();" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">💬</span><div class="text-left flex-1"><div>Mandar feedback ou bug</div><div class="text-[10px] font-normal text-slate-400">Achou algo estranho? Me conta</div></div></button><button onclick="closeModal();" class="w-full bg-slate-100 text-slate-600 font-semibold py-2.5 rounded-xl text-sm mt-3">Fechar</button></div></div></div>';
+  renderConexChat();
+  if (!conexState.ready) {
+    await loadConexHistory();
+    conexState.ready = true;
+    renderConexChat();
+  }
 }
+async function loadConexHistory() {
+  const { data } = await sb.from('conex_messages').select('*').order('created_at', { ascending: false }).limit(20);
+  conexState.messages = (data || []).reverse().filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({
+    role: m.role, content: m.content, tool_results: m.tool_calls
+  }));
+  const today = new Date().toISOString().slice(0,10);
+  const { data: u } = await sb.from('conex_usage').select('*').eq('usage_date', today).maybeSingle();
+  conexState.usage = { used: u?.message_count || 0, limit: 20 };
+}
+function renderConexChat() {
+  const msgs = conexState.messages;
+  const empty = msgs.length === 0;
+  const usage = conexState.usage;
+  const remaining = Math.max(0, usage.limit - usage.used);
+  const suggestions = ['Me explica peso de avaliação','Como tô nas minhas matérias?','Me faz quiz de matemática (frações)','Me lembra estudar amanhã às 19h','Tô estressado, me motiva'];
+  let bubbles = '';
+  if (empty) {
+    bubbles = '<div class="text-center py-8"><div class="w-24 h-24 mx-auto mb-3 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-5xl shadow-xl shadow-orange-500/30" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div class="text-lg font-bold text-slate-900 mb-1">E aí, sou o Conex!</div><div class="text-sm text-slate-500 mb-5 px-4 leading-relaxed">Posso te ajudar com notas, estudo, lembretes ou só dar uma força. O que vai ser, mano?</div><div class="space-y-2 px-2">' + suggestions.map(s => '<button onclick="sendConexMessage(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" class="w-full bg-white border border-orange-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-2xl text-left hover:bg-orange-50 transition">💬 ' + s + '</button>').join('') + '</div></div>';
+  } else {
+    bubbles = msgs.map(renderConexBubble).join('');
+    if (conexState.loading) bubbles += '<div class="flex items-end gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-base flex-shrink-0">🦊</div><div class="bg-slate-100 rounded-2xl rounded-bl-md px-4 py-3"><div class="flex gap-1"><div class="w-2 h-2 bg-slate-400 rounded-full" style="animation: tourBounce 1s ease-in-out infinite;"></div><div class="w-2 h-2 bg-slate-400 rounded-full" style="animation: tourBounce 1s ease-in-out infinite 0.2s;"></div><div class="w-2 h-2 bg-slate-400 rounded-full" style="animation: tourBounce 1s ease-in-out infinite 0.4s;"></div></div></div></div>';
+  }
+  const limitWarning = remaining <= 3 && remaining > 0 ? '<div class="px-4 py-2 bg-amber-50 border-y border-amber-200 text-[11px] text-amber-700 text-center">Restam ' + remaining + ' mensagens hoje</div>' : remaining === 0 ? '<div class="px-4 py-2 bg-red-50 border-y border-red-200 text-[11px] text-red-700 text-center">Você atingiu o limite de ' + usage.limit + ' mensagens hoje. Tenta de novo amanhã!</div>' : '';
+  const disabledInput = remaining === 0 || conexState.loading;
+  modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0"><form onsubmit="handleConexSubmit(event)" class="flex gap-2"><input id="conexInput" type="text" placeholder="Escreve pro Conex..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form></div></div>';
+  setTimeout(() => {
+    const el = document.getElementById('conexBubbles');
+    if (el) el.scrollTop = el.scrollHeight;
+    const inp = document.getElementById('conexInput');
+    if (inp && !disabledInput) inp.focus();
+  }, 50);
+}
+function closeConexChat() {
+  closeModal();
+}
+function renderConexBubble(msg) {
+  const isUser = msg.role === 'user';
+  const text = (msg.content || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;').replace(/\n/g, '<br>');
+  let toolHtml = '';
+  if (msg.tool_results && Array.isArray(msg.tool_results)) {
+    toolHtml = msg.tool_results.map(renderConexToolResult).join('');
+  }
+  if (isUser) {
+    return '<div class="flex justify-end mb-3"><div class="bg-orange-500 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[78%] text-sm shadow-sm">' + text + '</div></div>';
+  }
+  return '<div class="flex items-end gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-base flex-shrink-0">🦊</div><div class="max-w-[78%]"><div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-sm text-slate-800">' + text + '</div>' + toolHtml + '</div></div>';
+}
+function renderConexToolResult(tr) {
+  if (!tr || !tr.result) return '';
+  if (tr.name === 'create_task' && tr.result.ok) {
+    const task = tr.result.task;
+    return '<div class="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs"><div class="font-bold text-emerald-700 mb-1">✅ Tarefa criada</div><div class="text-slate-700"><strong>' + (task?.title || tr.args?.title || '') + '</strong>' + (task?.due_date ? ' · ' + new Date(task.due_date).toLocaleDateString("pt-BR") : '') + '</div></div>';
+  }
+  if (tr.name === 'create_quiz' && tr.result.ok && tr.result.questions?.length) {
+    return '<div class="mt-2 bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs"><div class="font-bold text-violet-700 mb-1">📋 Quiz pronto</div><div class="text-slate-700 mb-2"><strong>' + (tr.result.topic || '') + '</strong> · ' + tr.result.questions.length + ' perguntas</div><button onclick="openConexQuiz(' + JSON.stringify(tr.result.quiz_id || '').replace(/"/g, '&quot;') + ')" class="bg-violet-600 text-white font-bold py-2 px-4 rounded-lg text-xs">Começar quiz →</button></div>';
+  }
+  if (tr.name === 'get_grade_status' && tr.result.ok) {
+    return '';
+  }
+  return '';
+}
+async function handleConexSubmit(e) {
+  e.preventDefault();
+  const inp = document.getElementById('conexInput');
+  const text = (inp?.value || '').trim();
+  if (!text || conexState.loading) return;
+  inp.value = '';
+  await sendConexMessage(text);
+}
+async function sendConexMessage(text) {
+  if (conexState.loading) return;
+  if (conexState.usage.used >= conexState.usage.limit) {
+    toast('Limite de hoje atingido', 'error');
+    return;
+  }
+  conexState.messages.push({ role: 'user', content: text });
+  conexState.loading = true;
+  renderConexChat();
+  try {
+    const ctx = buildConexContext();
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/chat-conex', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        messages: conexState.messages.map(m => ({ role: m.role, content: m.content })),
+        context: ctx
+      })
+    });
+    if (resp.status === 429) {
+      const d = await resp.json();
+      conexState.usage = { used: d.used, limit: d.limit };
+      conexState.loading = false;
+      renderConexChat();
+      toast('Você atingiu o limite de ' + d.limit + ' mensagens hoje', 'error');
+      return;
+    }
+    const data = await resp.json();
+    if (data.error) {
+      conexState.loading = false;
+      conexState.messages.push({ role: 'assistant', content: 'Putz, deu ruim aqui. Tenta de novo? (' + (data.error || '') + ')' });
+      renderConexChat();
+      return;
+    }
+    conexState.messages.push({ role: 'assistant', content: data.reply, tool_results: data.tool_results });
+    if (data.usage) conexState.usage = data.usage;
+    conexState.loading = false;
+    renderConexChat();
+    // se gerou tarefa, recarrega tasks
+    if ((data.tool_results || []).some(t => t.name === 'create_task' && t.result?.ok)) {
+      const { data: ts } = await sb.from('tasks').select('*').order('due_date');
+      tasks = ts || [];
+    }
+  } catch (e) {
+    conexState.loading = false;
+    conexState.messages.push({ role: 'assistant', content: 'Tô sem conexão aqui, dá um refresh e tenta de novo?' });
+    renderConexChat();
+  }
+}
+function buildConexContext() {
+  const subjs = subjects.map(s => {
+    const m = calcMean(s.grades, currentBim);
+    return { name: s.name, mean: m !== null ? +m.toFixed(1) : null };
+  });
+  const pending = tasks.filter(t => !t.completed).length;
+  return {
+    name: userName(),
+    grade: profile?.grade_level || '',
+    school: profile?.school || '',
+    subjects: subjs,
+    tasks_pending: pending,
+    streak: getStats?.()?.streak || 0,
+  };
+}
+let conexQuizState = null;
+async function openConexQuiz(quizId) {
+  const { data: qz } = await sb.from('conex_quizzes').select('*').eq('id', quizId).maybeSingle();
+  if (!qz || !qz.questions || !qz.questions.length) { toast('Quiz não encontrado', 'error'); return; }
+  conexQuizState = { quiz: qz, idx: 0, answers: [], score: 0 };
+  renderConexQuiz();
+}
+function renderConexQuiz() {
+  if (!conexQuizState) return;
+  const { quiz, idx, answers, score } = conexQuizState;
+  const total = quiz.questions.length;
+  const finished = idx >= total;
+  if (finished) {
+    const pct = Math.round((score / total) * 100);
+    const msg = pct >= 80 ? 'Mandou bem demais, mano!' : pct >= 50 ? 'Bom, mas dá pra subir mais' : 'Tá 6 7, bora estudar mais';
+    modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 max-w-md w-full text-center shadow-2xl"><div class="text-5xl mb-3">🦊</div><div class="text-2xl font-extrabold text-slate-900 mb-1">' + score + '/' + total + '</div><div class="text-sm text-slate-600 mb-4">' + msg + '</div><div class="text-3xl font-extrabold mb-4 ' + (pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600') + '">' + pct + '%</div><button onclick="conexQuizState=null; openConexChat();" class="w-full bg-orange-500 text-white font-bold py-3 rounded-2xl text-sm">Voltar pro chat</button></div></div>';
+    sb.from('conex_quizzes').update({ answers: answers, score: pct, finished_at: new Date().toISOString() }).eq('id', quiz.id);
+    return;
+  }
+  const q = quiz.questions[idx];
+  const options = (q.options || []).map((opt, i) => '<button onclick="answerConexQuiz(' + i + ')" class="w-full bg-white border-2 border-slate-200 hover:border-orange-400 text-slate-800 font-semibold py-3 px-4 rounded-2xl text-sm text-left transition mb-2">' + (opt || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;') + '</button>').join('');
+  modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-slate-50 flex flex-col"><div class="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-3 flex items-center gap-3 shadow-md"><button onclick="conexQuizState=null; openConexChat();" class="text-white text-lg w-8 h-8">←</button><div class="flex-1"><div class="text-sm font-bold">Quiz · ' + (quiz.topic || '') + '</div><div class="text-[10px] opacity-90">Pergunta ' + (idx+1) + ' de ' + total + '</div></div></div><div class="h-1 bg-white/30"><div class="h-full bg-white transition-all" style="width:' + (((idx)/total)*100) + '%"></div></div><div class="flex-1 overflow-y-auto p-5"><div class="bg-white rounded-2xl p-5 mb-5 shadow-sm"><div class="text-sm text-slate-500 font-bold uppercase tracking-wider mb-2">Pergunta ' + (idx+1) + '</div><div class="text-base font-bold text-slate-900 leading-relaxed">' + (q.q || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;') + '</div></div>' + options + '</div></div>';
+}
+async function answerConexQuiz(answerIdx) {
+  if (!conexQuizState) return;
+  const q = conexQuizState.quiz.questions[conexQuizState.idx];
+  const correct = answerIdx === q.correct;
+  if (correct) conexQuizState.score++;
+  conexQuizState.answers.push(answerIdx);
+  const msg = correct ? '✅ Correto!' : '❌ Errado';
+  const expl = q.explanation || (q.options[q.correct] ? 'A resposta certa era: ' + q.options[q.correct] : '');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-center justify-center z-50 p-4"><div class="bg-white rounded-3xl p-6 max-w-md w-full text-center shadow-2xl"><div class="text-5xl mb-3">' + (correct ? '🎉' : '😅') + '</div><div class="text-xl font-extrabold ' + (correct ? 'text-green-600' : 'text-red-600') + ' mb-2">' + msg + '</div><div class="text-sm text-slate-700 leading-relaxed mb-5 bg-slate-50 rounded-xl p-3">' + expl.replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;') + '</div><button onclick="conexQuizState.idx++; renderConexQuiz();" class="w-full bg-violet-600 text-white font-bold py-3 rounded-2xl text-sm">Próxima →</button></div></div>';
+}
+
 async function maybeConsumeShield() {
   const stats = getStats();
   if (!stats.shieldNeedsConsume) return;
