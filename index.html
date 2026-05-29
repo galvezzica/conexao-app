@@ -391,6 +391,7 @@ let subjects = [], tasks = [], prayers = [], allHabits = [];
 let myReactions = new Set(), reactionCounts = {}, expandedId = null;
 let profile = null, currentBim = 1;
 let badges = [], feedPosts = [], feedReactions = [], myFeedReactions = new Set(), feedReactionCounts = {}, communityTab = 'feed';
+let shieldLog = [];
 let friendships = [], schoolMates = [], friendsTab = 'discover';
 let notifications = [];
 
@@ -419,11 +420,13 @@ async function loadAndRender() {
   (fr.data || []).forEach(r => { const k = r.post_id+':'+r.reaction_type; feedReactionCounts[k] = (feedReactionCounts[k]||0)+1; });
   myFeedReactions = new Set((mfr.data || []).map(r => r.post_id+':'+r.reaction_type));
   // Carregar amizades + colegas + notifications
-  const [fs, sm, nt] = await Promise.all([
+  const [fs, sm, nt, sl] = await Promise.all([
     sb.from('friendships').select('*'),
     profile?.school ? sb.from('profiles').select('*').neq('user_id', currentUser.id) : Promise.resolve({ data: [] }),
     sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(50),
+    sb.from('streak_shield_log').select('*').order('used_at', { ascending: false }).limit(30),
   ]);
+  shieldLog = sl.data || [];
   friendships = fs.data || [];
   schoolMates = sm.data || [];
   notifications = nt.data || [];
@@ -443,6 +446,8 @@ async function loadAndRender() {
   if (!localStorage.getItem('tour_v3_done')) {
     setTimeout(tryOpenTourV3, 4000);
   }
+  // Consome escudo automaticamente se detectou gap de 1 dia
+  setTimeout(maybeConsumeShield, 1000);
   setTimeout(notifyOverdue, 1500);
   setTimeout(checkBadges, 800);
   setTimeout(() => showWhatsNew(false), 1200);
@@ -628,10 +633,12 @@ function streakFireCard(streak) {
   const today = new Date().toISOString().slice(0, 10);
   const todayKeys = new Set(allHabits.filter(h => h.completed_date === today).map(h => h.habit_key));
   const atRisk = todayKeys.size === 0;
+  const shields = (profile && profile.streak_shields) || 0;
   const intensity = streak >= 30 ? 'text-7xl drop-shadow-2xl' : streak >= 14 ? 'text-6xl drop-shadow-xl' : streak >= 7 ? 'text-5xl drop-shadow-lg' : 'text-5xl';
   const bg = atRisk ? 'from-red-500 to-orange-600' : 'from-amber-400 via-orange-500 to-red-500';
-  const warning = atRisk ? '<div class="bg-white/20 backdrop-blur rounded-xl p-2 mt-3 text-xs font-bold text-white">⚠️ Marca um hábito hoje pra não perder!</div>' : '';
-  return '<div class="bg-gradient-to-br ' + bg + ' rounded-3xl p-5 text-white mb-4 anim-fade shadow-2xl shadow-orange-500/40 cursor-pointer" onclick="setTab(\'points\')"><div class="flex items-center gap-4"><div class="' + intensity + ' float">🔥</div><div class="flex-1"><div class="text-4xl font-extrabold leading-none">' + streak + '</div><div class="text-xs uppercase tracking-widest font-bold opacity-90 mt-1">dias de fogo seguidos</div></div></div>' + warning + '</div>';
+  const warning = atRisk && shields === 0 ? '<div class="bg-white/20 backdrop-blur rounded-xl p-2 mt-3 text-xs font-bold text-white">⚠️ Marca um hábito hoje pra não perder!</div>' : (atRisk && shields > 0 ? '<div class="bg-white/20 backdrop-blur rounded-xl p-2 mt-3 text-xs font-bold text-white">🛡️ Tem '+shields+' escudo(s). Marca um hábito pra não gastar.</div>' : '');
+  const shieldBadge = '<div class="bg-white/20 backdrop-blur rounded-xl px-3 py-2 text-center cursor-pointer" onclick="event.stopPropagation(); openShieldModal()"><div class="text-2xl">🛡️</div><div class="text-xs font-bold mt-0.5">'+shields+'</div></div>';
+  return '<div class="bg-gradient-to-br ' + bg + ' rounded-3xl p-5 text-white mb-4 anim-fade shadow-2xl shadow-orange-500/40"><div class="flex items-center gap-4 cursor-pointer" onclick="setTab(\'points\')"><div class="' + intensity + ' float">🔥</div><div class="flex-1"><div class="text-4xl font-extrabold leading-none">' + streak + '</div><div class="text-xs uppercase tracking-widest font-bold opacity-90 mt-1">dias de fogo</div></div>' + shieldBadge + '</div>' + warning + '</div>';
 }
 
 // COMPARTILHAR CONQUISTA NO INSTAGRAM/STORY
@@ -925,8 +932,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.9-beta';
+const APP_VERSION = '2.10-beta';
 const CHANGELOG = [
+  { v: '2.10-beta', emoji: '🛡️', title: 'Escudo de ofensiva', items: [
+    'Esqueceu de marcar um dia? O escudo protege automaticamente, sua ofensiva continua',
+    'Todo mundo começa com 2 escudos grátis',
+    'Pode comprar mais por 150 pontos (no perfil), até 2 acumulados',
+    'Card de fogo agora mostra quantos escudos você tem',
+  ]},
   { v: '2.9-beta', emoji: '🎯', title: 'Cadastro de notas mais certo', items: [
     'Tour novo focado em como cadastrar pra média bater com a do colégio',
     'Banner destacado pra quem ainda não cadastrou matéria ou avaliações',
@@ -1044,11 +1057,24 @@ function getStats() {
   const weekPoints = allHabits.filter(h => h.completed_date >= ws).reduce((s, h) => s + (h.points || 0), 0);
   const dates = [...new Set(allHabits.map(h => h.completed_date))].sort().reverse();
   let streak = 0;
+  let shieldNeedsConsume = false;
   if (dates.length) {
-    const tdy = new Date().toISOString().slice(0,10);
-    let cur = dates[0] === tdy ? 0 : (dates[0] === new Date(Date.now()-86400000).toISOString().slice(0,10) ? -1 : null);
-    if (cur !== null) {
-      let exp = new Date(); exp.setHours(0,0,0,0); exp.setDate(exp.getDate() + cur);
+    const tdy = new Date(); tdy.setHours(0,0,0,0);
+    const tdyStr = tdy.toISOString().slice(0,10);
+    const ystStr = new Date(tdy.getTime()-86400000).toISOString().slice(0,10);
+    const antStr = new Date(tdy.getTime()-2*86400000).toISOString().slice(0,10);
+    const availShields = (profile && profile.streak_shields) || 0;
+    const yesterdayProtected = (shieldLog || []).some(l => l.date_protected === ystStr && l.reason === 'auto');
+    let startOffset = null;
+    if (dates[0] === tdyStr) startOffset = 0;
+    else if (dates[0] === ystStr) startOffset = -1;
+    else if (dates[0] === antStr && (availShields >= 1 || yesterdayProtected)) {
+      startOffset = -2;
+      if (!yesterdayProtected) shieldNeedsConsume = true;
+      streak = 1; // dia protegido conta
+    }
+    if (startOffset !== null) {
+      let exp = new Date(tdy); exp.setDate(exp.getDate() + startOffset);
       for (const d of dates) {
         if (d === exp.toISOString().slice(0,10)) { streak++; exp.setDate(exp.getDate() - 1); }
         else break;
@@ -1070,7 +1096,7 @@ function getStats() {
   const bibleWeek = allHabits.filter(h => h.completed_date >= wsStr && h.habit_key === 'bible').length;
   const tasksWeek = tasks.filter(t => t.completed && t.completed_at && t.completed_at >= weekStart.toISOString()).length;
   const activeDays = new Set(allHabits.map(h => h.completed_date)).size;
-  return { todayKeys, totalPoints, weekPoints, streak, bibleCount, lateTasks, pendingTasks, totalCompletions: allHabits.length, tasksDone, overallMean, habitsMonth, bibleWeek, tasksWeek, activeDays, badgesCount: badges.length };
+  return { todayKeys, totalPoints, weekPoints, streak, shieldNeedsConsume, shields: (profile && profile.streak_shields) || 0, bibleCount, lateTasks, pendingTasks, totalCompletions: allHabits.length, tasksDone, overallMean, habitsMonth, bibleWeek, tasksWeek, activeDays, badgesCount: badges.length };
 }
 function getAchievements(s) { return BADGES_DEF.map(b => ({ ...b, unlocked: badges.some(x => x.badge_key === b.key) })); }
 function challengeProgress(c, stats) {
@@ -1659,7 +1685,7 @@ function renderProfile() {
   html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Turma (opcional)</label><input id="pf_class" type="text" maxlength="5" value="'+escapeHtml(profile?.class_letter||'')+'" placeholder="Ex: 9A" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></form>';
-  html += '<div class="mt-4 space-y-2"><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="openInviteModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">🎁 Convidar amigo (+ tema premium)</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button>' + adminBtnHtml() + '<button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  html += '<div class="mt-4 space-y-2"><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="openInviteModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">🎁 Convidar amigo (+ tema premium)</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openShieldModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🛡️ Meus escudos</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button>' + adminBtnHtml() + '<button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
   return html;
 }
 async function saveProfile(e) {
@@ -1709,6 +1735,38 @@ function tryOpenTourV3() {
     return;
   }
   openTour(0);
+}
+async function maybeConsumeShield() {
+  const stats = getStats();
+  if (!stats.shieldNeedsConsume) return;
+  const yst = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const { data, error } = await sb.rpc('consume_shield', { date_to_protect: yst });
+  if (error) { console.warn('consume_shield erro', error); return; }
+  if (data === true) {
+    toast('🛡️ Escudo usado! Ofensiva mantida.', 'success');
+    if (profile) profile.streak_shields = Math.max(0, (profile.streak_shields||0) - 1);
+    shieldLog.unshift({ date_protected: yst, reason: 'auto', used_at: new Date().toISOString() });
+    renderShell();
+  }
+}
+async function buyShield() {
+  const { data, error } = await sb.rpc('buy_shield');
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  if (!data || !data.ok) {
+    if (data && data.reason === 'cap') toast('Você já tem o máximo de escudos (2)', 'error');
+    else if (data && data.reason === 'no_points') toast('Faltam ' + (data.need - data.have) + ' pontos pra comprar', 'error');
+    else toast('Não foi possível comprar', 'error');
+    return;
+  }
+  toast('🛡️ Escudo comprado!', 'success');
+  if (profile) profile.streak_shields = data.shields;
+  shieldLog.unshift({ date_protected: new Date().toISOString().slice(0,10), reason: 'bought', used_at: new Date().toISOString() });
+  renderShell();
+}
+function openShieldModal() {
+  const shields = (profile && profile.streak_shields) || 0;
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-5xl mb-3 text-center">🛡️</div><div class="text-lg font-bold text-slate-900 mb-2 text-center">Escudo de ofensiva</div><div class="text-sm text-slate-600 leading-relaxed mb-4 text-center">Esqueceu de marcar um dia? O escudo protege a ofensiva automaticamente. Você tem <strong>'+shields+' escudo(s)</strong>.</div><div class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 mb-4 leading-relaxed">• 1 escudo cobre 1 dia perdido<br>• Máximo 2 escudos acumulados<br>• Se perder 2 dias seguidos, a ofensiva quebra mesmo com escudo</div>'+(shields<2?'<button onclick="buyShield()" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3 rounded-2xl text-sm shadow-md shadow-indigo-500/30 mb-2">Comprar por 150 pontos</button>':'<div class="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-2xl text-sm text-center mb-2">Você já tem o máximo</div>')+'<button onclick="closeModal()" class="w-full bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Fechar</button></div></div>';
 }
 
 function openSubjectModal() {
