@@ -638,7 +638,7 @@ function streakFireCard(streak) {
   const bg = atRisk ? 'from-red-500 to-orange-600' : 'from-amber-400 via-orange-500 to-red-500';
   const warning = atRisk && shields === 0 ? '<div class="bg-white/20 backdrop-blur rounded-xl p-2 mt-3 text-xs font-bold text-white">⚠️ Marca um hábito hoje pra não perder!</div>' : (atRisk && shields > 0 ? '<div class="bg-white/20 backdrop-blur rounded-xl p-2 mt-3 text-xs font-bold text-white">🛡️ Tem '+shields+' escudo(s). Marca um hábito pra não gastar.</div>' : '');
   const shieldBadge = '<div class="bg-white/20 backdrop-blur rounded-xl px-3 py-2 text-center cursor-pointer" onclick="event.stopPropagation(); openShieldModal()"><div class="text-2xl">🛡️</div><div class="text-xs font-bold mt-0.5">'+shields+'</div></div>';
-  return '<div class="bg-gradient-to-br ' + bg + ' rounded-3xl p-5 text-white mb-4 anim-fade shadow-2xl shadow-orange-500/40"><div class="flex items-center gap-4 cursor-pointer" onclick="setTab(\'points\')"><div class="' + intensity + ' float">🔥</div><div class="flex-1"><div class="text-4xl font-extrabold leading-none">' + streak + '</div><div class="text-xs uppercase tracking-widest font-bold opacity-90 mt-1">dias de fogo</div></div>' + shieldBadge + '</div>' + warning + '</div>';
+  return '<div class="bg-gradient-to-br ' + bg + ' rounded-3xl p-5 text-white mb-4 anim-fade shadow-2xl shadow-orange-500/40"><div class="flex items-center gap-4 cursor-pointer" onclick="openStreakCalendar()"><div class="' + intensity + ' float">🔥</div><div class="flex-1"><div class="text-4xl font-extrabold leading-none">' + streak + '</div><div class="text-xs uppercase tracking-widest font-bold opacity-90 mt-1">dias de fogo</div></div>' + shieldBadge + '</div>' + warning + '</div>';
 }
 
 // COMPARTILHAR CONQUISTA NO INSTAGRAM/STORY
@@ -932,8 +932,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.10-beta';
+const APP_VERSION = '2.11-beta';
 const CHANGELOG = [
+  { v: '2.11-beta', emoji: '📅', title: 'Calendário da ofensiva', items: [
+    'Toca no card de fogo pra abrir o calendário do mês',
+    'Cada dia mostra se você marcou hábito 🔥 ou usou escudo 🛡️',
+    'Navegação por mês com setas',
+    'Total do mês no rodapé',
+  ]},
   { v: '2.10-beta', emoji: '🛡️', title: 'Escudo de ofensiva', items: [
     'Esqueceu de marcar um dia? O escudo protege automaticamente, sua ofensiva continua',
     'Todo mundo começa com 2 escudos grátis',
@@ -1727,6 +1733,68 @@ function closeTour() {
   localStorage.setItem('tour_v3_done', '1');
   localStorage.setItem('tour_done', '1');
   closeModal();
+}
+let calendarMonth = null; // {year, month} - null = mes atual
+function openStreakCalendar(yearArg, monthArg) {
+  const now = new Date();
+  let year = yearArg !== undefined ? yearArg : (calendarMonth ? calendarMonth.year : now.getFullYear());
+  let month = monthArg !== undefined ? monthArg : (calendarMonth ? calendarMonth.month : now.getMonth());
+  calendarMonth = { year, month };
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startWeekday = firstDay.getDay();
+  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const tdyStr = now.toISOString().slice(0,10);
+  // Datas com hábitos no mês
+  const habitDates = new Set(allHabits.filter(h => {
+    const d = new Date(h.completed_date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  }).map(h => h.completed_date));
+  // Datas protegidas no mês
+  const shieldDates = new Set((shieldLog || []).filter(l => {
+    if (l.reason !== 'auto') return false;
+    const d = new Date(l.date_protected);
+    return d.getFullYear() === year && d.getMonth() === month;
+  }).map(l => l.date_protected));
+  // Monta grid
+  const weekdayLabels = ['D','S','T','Q','Q','S','S'];
+  let cells = '';
+  for (let i = 0; i < startWeekday; i++) cells += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dStr = new Date(year, month, d).toISOString().slice(0,10);
+    const hasHabit = habitDates.has(dStr);
+    const hasShield = shieldDates.has(dStr);
+    const isToday = dStr === tdyStr;
+    const isFuture = dStr > tdyStr;
+    let cellClass = 'aspect-square rounded-xl flex items-center justify-center text-xs font-bold relative ';
+    let inner = '';
+    if (hasHabit) {
+      cellClass += 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md';
+      inner = '<div class="text-base">🔥</div><div class="text-[9px] absolute bottom-0.5 right-1">'+d+'</div>';
+    } else if (hasShield) {
+      cellClass += 'bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md';
+      inner = '<div class="text-base">🛡️</div><div class="text-[9px] absolute bottom-0.5 right-1">'+d+'</div>';
+    } else if (isFuture) {
+      cellClass += 'text-slate-300';
+      inner = d;
+    } else {
+      cellClass += 'bg-slate-100 text-slate-400';
+      inner = d;
+    }
+    if (isToday) cellClass += ' ring-2 ring-blue-700 ring-offset-1';
+    cells += '<div class="'+cellClass+'">'+inner+'</div>';
+  }
+  const fireDays = habitDates.size;
+  const shieldDays = shieldDates.size;
+  // Navegação
+  const prevYear = month === 0 ? year - 1 : year;
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const nextYear = month === 11 ? year + 1 : year;
+  const nextMonth = month === 11 ? 0 : month + 1;
+  const isCurrentOrFuture = (year === now.getFullYear() && month >= now.getMonth()) || year > now.getFullYear();
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this){calendarMonth=null;closeModal();}"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up"><div class="flex items-center justify-between mb-4"><button onclick="openStreakCalendar('+prevYear+','+prevMonth+')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">←</button><div class="text-center"><div class="text-base font-bold text-slate-900">'+monthNames[month]+' '+year+'</div><div class="text-[10px] text-slate-400 uppercase tracking-wide">Sua ofensiva</div></div><button '+(isCurrentOrFuture?'disabled class="w-9 h-9 rounded-full bg-slate-50 text-slate-300"':'onclick="openStreakCalendar('+nextYear+','+nextMonth+')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700"')+'>→</button></div><div class="grid grid-cols-7 gap-1 mb-2">'+weekdayLabels.map(w => '<div class="text-center text-[10px] font-bold text-slate-400 uppercase">'+w+'</div>').join('')+'</div><div class="grid grid-cols-7 gap-1 mb-4">'+cells+'</div><div class="bg-slate-50 rounded-xl p-3 flex items-center justify-around text-center mb-3"><div><div class="text-xl">🔥</div><div class="text-lg font-extrabold text-orange-600">'+fireDays+'</div><div class="text-[10px] text-slate-500 font-semibold uppercase">dias de fogo</div></div><div class="w-px h-10 bg-slate-200"></div><div><div class="text-xl">🛡️</div><div class="text-lg font-extrabold text-blue-600">'+shieldDays+'</div><div class="text-[10px] text-slate-500 font-semibold uppercase">escudos usados</div></div></div><button onclick="calendarMonth=null;closeModal();" class="w-full bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Fechar</button></div></div>';
 }
 function tryOpenTourV3() {
   if (localStorage.getItem('tour_v3_done')) return;
