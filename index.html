@@ -1857,24 +1857,30 @@ function renderConexChat() {
   }
   const limitWarning = remaining <= 3 && remaining > 0 ? '<div class="px-4 py-2 bg-amber-50 border-y border-amber-200 text-[11px] text-amber-700 text-center">Restam ' + remaining + ' mensagens hoje</div>' : remaining === 0 ? '<div class="px-4 py-2 bg-red-50 border-y border-red-200 text-[11px] text-red-700 text-center">Você atingiu o limite de ' + usage.limit + ' mensagens hoje. Tenta de novo amanhã!</div>' : '';
   const disabledInput = remaining === 0 || conexState.loading;
-  modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0"><form onsubmit="handleConexSubmit(event)" class="flex gap-2"><input id="conexInput" type="text" placeholder="Escreve pro Conex..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form></div></div>';
+  try { modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0"><form onsubmit="handleConexSubmit(event)" class="flex gap-2"><input id="conexInput" type="text" placeholder="Escreve pro Conex..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form></div></div>';
   setTimeout(() => {
     const el = document.getElementById('conexBubbles');
     if (el) el.scrollTop = el.scrollHeight;
     const inp = document.getElementById('conexInput');
     if (inp && !disabledInput) inp.focus();
   }, 50);
+  } catch(e) {
+    console.error('renderConexChat erro', e);
+    modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex items-center justify-center p-6"><div class="text-center"><div class="text-5xl mb-3">🦊</div><div class="text-base font-bold mb-2">Eita, deu um nó aqui</div><div class="text-xs text-slate-500 mb-4">Tenta fechar e abrir de novo. Se persistir, manda feedback.</div><button onclick="closeModal()" class="bg-orange-500 text-white font-bold px-6 py-3 rounded-2xl">Fechar</button></div></div>';
+  }
 }
 function closeConexChat() {
   closeModal();
 }
 function renderConexBubble(msg) {
   const isUser = msg.role === 'user';
-  const text = (msg.content || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;').replace(/\n/g, '<br>');
+  const text = escapeHtml(msg.content || '').replace(/\n/g, '<br>');
   let toolHtml = '';
-  if (msg.tool_results && Array.isArray(msg.tool_results)) {
-    toolHtml = msg.tool_results.map(renderConexToolResult).join('');
-  }
+  try {
+    let trs = msg.tool_results;
+    if (typeof trs === 'string') trs = JSON.parse(trs);
+    if (trs && Array.isArray(trs)) toolHtml = trs.map(renderConexToolResult).join('');
+  } catch(e) { console.warn('tool_results parse', e); }
   if (isUser) {
     return '<div class="flex justify-end mb-3"><div class="bg-orange-500 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[78%] text-sm shadow-sm">' + text + '</div></div>';
   }
@@ -1957,19 +1963,27 @@ async function sendConexMessage(text) {
   }
 }
 function buildConexContext() {
-  const subjs = subjects.map(s => {
-    const m = calcMean(s.grades, currentBim);
-    return { name: s.name, mean: m !== null ? +m.toFixed(1) : null };
-  });
-  const pending = tasks.filter(t => !t.completed).length;
-  return {
-    name: userName(),
-    grade: profile?.grade_level || '',
-    school: profile?.school || '',
-    subjects: subjs,
-    tasks_pending: pending,
-    streak: getStats?.()?.streak || 0,
-  };
+  try {
+    const subjs = (subjects || []).map(s => {
+      let m = null;
+      try { m = calcMean(s.grades, currentBim); } catch(e) {}
+      return { name: s.name || '?', mean: (m !== null && m !== undefined) ? +m.toFixed(1) : null };
+    });
+    const pending = (tasks || []).filter(t => !t.completed).length;
+    let streak = 0;
+    try { streak = getStats().streak || 0; } catch(e) {}
+    return {
+      name: typeof userName === 'function' ? userName() : '',
+      grade: profile?.grade_level || '',
+      school: profile?.school || '',
+      subjects: subjs,
+      tasks_pending: pending,
+      streak: streak,
+    };
+  } catch(e) {
+    console.warn('buildConexContext erro', e);
+    return { name: '', subjects: [], tasks_pending: 0, streak: 0 };
+  }
 }
 let conexQuizState = null;
 async function openConexQuiz(quizId) {
