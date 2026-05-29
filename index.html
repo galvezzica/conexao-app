@@ -63,6 +63,7 @@
   html.dark .bg-slate-50 { background-color: #0f172a !important; }
   html.dark .bg-slate-100 { background-color: #334155 !important; }
   html.dark .text-slate-900 { color: #f1f5f9 !important; }
+  html.dark .text-slate-800 { color: #e2e8f0 !important; }
   html.dark .text-slate-700 { color: #cbd5e1 !important; }
   html.dark .text-slate-600 { color: #cbd5e1 !important; }
   html.dark .text-slate-500 { color: #94a3b8 !important; }
@@ -933,7 +934,7 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.15.2';
+const APP_VERSION = '2.15.3';
 const CHANGELOG = [
   { v: '2.15', emoji: '🤖', title: 'Chat com o Conex (IA)', items: [
     'Conversa real com a raposa: tira dúvidas de matéria, recebe motivação',
@@ -1890,7 +1891,7 @@ function renderConexBubble(msg) {
   if (isUser) {
     return '<div class="flex justify-end mb-3"><div class="bg-orange-500 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[78%] text-sm shadow-sm">' + text + '</div></div>';
   }
-  return '<div class="flex items-end gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-base flex-shrink-0">🦊</div><div class="max-w-[78%]"><div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-sm text-slate-800">' + text + '</div>' + toolHtml + '</div></div>';
+  return '<div class="flex items-end gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-base flex-shrink-0">🦊</div><div class="max-w-[78%]"><div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-sm text-slate-700">' + text + '</div>' + toolHtml + '</div></div>';
 }
 function renderConexToolResult(tr) {
   try {
