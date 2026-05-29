@@ -378,12 +378,13 @@ const FAQS = [
 ];
 
 const TOUR_STEPS = [
-  { icon: '👋', title: 'Tour rápido das notas', text: 'A galera mandou feedback que a média no app não batia com a do colégio. Quase sempre o motivo é o mesmo: faltou cadastrar tudo certinho. Vou te mostrar como evitar isso em 1 minuto.' },
-  { icon: '📚', title: 'Passo 1: cadastra a matéria', text: 'Na aba Notas, toca em + Matéria. Coloca o nome (Ex: Matemática) e, se quiser, o professor. Quando você adicionar nota nessa matéria depois, o professor já vem preenchido sozinho.' },
-  { icon: '📊', title: 'Passo 2: cadastra TODAS as avaliações', text: 'Aqui tá o segredo. Não cadastra só as provas. Cadastra também trabalhos, participação, atividades contínuas, tudo que entra no boletim. Se faltar alguma, a média do app vai ficar diferente da real.' },
-  { icon: '⚖️', title: 'Passo 3: cuidado com o peso', text: 'Peso NÃO é o valor da prova. Peso é só o multiplicador que diz quanto a avaliação conta na média. Prova vale peso 3, trabalho peso 1, participação peso 1. A nota você cadastra como veio do professor. Pergunta o peso pra ele.' },
-  { icon: '🔄', title: 'Recuperação: edita a prova antiga', text: 'Se fez recuperação e foi melhor, abre a nota antiga e troca pelo valor maior. Não cadastra a recuperação como avaliação nova, senão o app conta as duas e tua média fica errada.' },
-  { icon: '🎯', title: 'Pronto, tá tudo certo', text: 'Cadastrando assim a média do app vai bater com a do colégio. Se tiver dúvida, abre o menu Ajuda. Bora?' },
+  { tab: null, target: null, title: 'E aí, beleza?', text: 'Sou o Conex, vou te ensinar a usar o app em 1 minuto. Bora?' },
+  { tab: null, target: null, title: 'O que dá pra fazer', text: 'Aqui dá pra acompanhar tuas notas, tarefas, hábitos e ainda conectar com a galera da tua escola. Vou focar no mais importante: as notas.' },
+  { tab: 'grades', target: '[data-tour="add-subject-btn"]', title: 'Cadastra a matéria', text: 'Toca em + Matéria. Coloca o nome e, se quiser, o professor. Quando cadastrar nota depois, o professor vem preenchido sozinho.' },
+  { tab: 'grades', target: null, title: 'Cadastra TODAS as avaliações', text: 'Não cadastra só as provas. Trabalhos, participação, atividade contínua, TUDO que entra no boletim. Senão tua média no app não bate com a real.' },
+  { tab: 'grades', target: null, title: 'Cuidado com o peso', text: 'Peso NÃO é o valor da prova. É só o multiplicador. Prova vale peso 3, trabalho peso 1. A nota tu coloca como veio do professor.' },
+  { tab: 'grades', target: null, title: 'Recuperação', text: 'Se fez recuperação e foi melhor, abre a nota antiga e troca pelo valor maior. Não cria avaliação nova, senão o app conta as duas.' },
+  { tab: null, target: null, title: 'Pronto!', text: 'Cadastrando assim, tua média no app vai bater com a do colégio. Tô sempre aqui no perfil se quiser rever. Bora?' },
 ];
 
 let mode = 'login', currentUser = null, currentTab = 'home';
@@ -1727,79 +1728,78 @@ function renderFAQ() {
   return html;
 }
 
+let tourTypewriterTimer = null;
 function openTour(step) {
   const t = TOUR_STEPS[step];
-  if (!t) { closeModal(); localStorage.setItem('tour_v3_done', '1'); localStorage.setItem('tour_done', '1'); return; }
+  if (!t) { closeTour(); return; }
   const isLast = step === TOUR_STEPS.length - 1;
+  if (t.tab && currentTab !== t.tab) setTab(t.tab);
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-5xl mb-4">'+t.icon+'</div><div class="text-lg font-bold text-slate-900 mb-2">'+t.title+'</div><div class="text-sm text-slate-600 leading-relaxed mb-5">'+t.text+'</div><div class="flex items-center justify-between"><div class="flex gap-1.5">'+TOUR_STEPS.map((_, i) => '<div class="w-2 h-2 rounded-full '+(i===step?'bg-blue-900':'bg-slate-200')+'"></div>').join('')+'</div><div class="flex gap-2">'+(step>0?'<button onclick="openTour('+(step-1)+')" class="text-sm font-semibold text-slate-500 px-3 py-2">Voltar</button>':'<button onclick="closeTour()" class="text-sm font-semibold text-slate-500 px-3 py-2">Pular</button>')+'<button onclick="'+(isLast?'closeTour()':'openTour('+(step+1)+')')+'" class="text-sm font-bold bg-blue-900 text-white px-5 py-2 rounded-xl">'+(isLast?'Começar':'Próximo')+'</button></div></div></div></div>';
+  modalEl.innerHTML = '';
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-50';
+  overlay.style.background = 'rgba(0,0,0,0.65)';
+  overlay.id = 'tourOverlay';
+  modalEl.appendChild(overlay);
+  const oldHole = document.getElementById('tourHole');
+  if (oldHole) oldHole.remove();
+  if (t.target) {
+    setTimeout(() => {
+      const targetEl = document.querySelector(t.target);
+      if (targetEl) {
+        const rect = targetEl.getBoundingClientRect();
+        const pad = 8;
+        const hole = document.createElement('div');
+        hole.style.position = 'fixed';
+        hole.style.top = (rect.top - pad) + 'px';
+        hole.style.left = (rect.left - pad) + 'px';
+        hole.style.width = (rect.width + pad*2) + 'px';
+        hole.style.height = (rect.height + pad*2) + 'px';
+        hole.style.borderRadius = '12px';
+        hole.style.boxShadow = '0 0 0 9999px rgba(0,0,0,0.65)';
+        hole.style.border = '3px solid #fff';
+        hole.style.zIndex = '51';
+        hole.style.pointerEvents = 'none';
+        hole.style.animation = 'tourPulse 1.5s ease-in-out infinite';
+        hole.id = 'tourHole';
+        overlay.style.background = 'transparent';
+        document.body.appendChild(hole);
+        try { targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
+      }
+    }, t.tab && currentTab !== t.tab ? 300 : 60);
+  }
+  const dots = TOUR_STEPS.map((_, i) => '<div class="h-1.5 rounded-full transition-all '+(i===step?'w-6 bg-orange-500':i<step?'w-1.5 bg-orange-300':'w-1.5 bg-slate-200')+'"></div>').join('');
+  const backBtn = step>0 ? '<button onclick="openTour('+(step-1)+')" class="text-xs font-semibold text-slate-500 px-3 py-2">← Voltar</button>' : '<button onclick="closeTour()" class="text-xs font-semibold text-slate-500 px-3 py-2">Pular</button>';
+  const nextLabel = isLast ? 'Começar!' : 'Próximo →';
+  const nextAction = isLast ? 'closeTour()' : 'openTour('+(step+1)+')';
+  const bubble = document.createElement('div');
+  bubble.className = 'fixed left-3 right-3 z-[60] anim-up';
+  bubble.style.bottom = '20px';
+  bubble.innerHTML = '<div class="bg-white rounded-3xl shadow-2xl p-5 max-w-md mx-auto border-2 border-orange-200"><div class="flex items-start gap-3 mb-3"><div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-3xl flex-shrink-0 shadow-lg" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div class="flex-1 min-w-0"><div class="text-[10px] uppercase tracking-widest font-bold text-orange-600 mb-0.5">Conex diz:</div><div class="text-base font-bold text-slate-900">'+t.title+'</div></div></div><div class="text-sm text-slate-700 leading-relaxed mb-4 min-h-[60px]" id="tourTypewriter"></div><div class="flex items-center justify-between"><div class="flex gap-1.5">'+dots+'</div><div class="flex gap-2">'+backBtn+'<button id="tourNextBtn" onclick="'+nextAction+'" disabled class="text-xs font-bold bg-orange-500 text-white px-5 py-2 rounded-xl opacity-50 transition">'+nextLabel+'</button></div></div></div>';
+  modalEl.appendChild(bubble);
+  const tw = document.getElementById('tourTypewriter');
+  const nextBtn = document.getElementById('tourNextBtn');
+  let idx = 0;
+  const fullText = t.text;
+  if (tourTypewriterTimer) clearInterval(tourTypewriterTimer);
+  tourTypewriterTimer = setInterval(() => {
+    if (idx >= fullText.length) {
+      clearInterval(tourTypewriterTimer);
+      tourTypewriterTimer = null;
+      if (nextBtn) { nextBtn.disabled = false; nextBtn.classList.remove('opacity-50'); }
+      return;
+    }
+    if (tw) tw.textContent += fullText.charAt(idx);
+    idx++;
+  }, 22);
 }
 function closeTour() {
+  if (tourTypewriterTimer) { clearInterval(tourTypewriterTimer); tourTypewriterTimer = null; }
+  const hole = document.getElementById('tourHole');
+  if (hole) hole.remove();
   localStorage.setItem('tour_v3_done', '1');
   localStorage.setItem('tour_done', '1');
   closeModal();
-}
-let calendarMonth = null; // {year, month} - null = mes atual
-function openStreakCalendar(yearArg, monthArg) {
-  const now = new Date();
-  let year = yearArg !== undefined ? yearArg : (calendarMonth ? calendarMonth.year : now.getFullYear());
-  let month = monthArg !== undefined ? monthArg : (calendarMonth ? calendarMonth.month : now.getMonth());
-  calendarMonth = { year, month };
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const daysInMonth = lastDay.getDate();
-  const startWeekday = firstDay.getDay();
-  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const tdyStr = now.toISOString().slice(0,10);
-  // Datas com hábitos no mês
-  const habitDates = new Set(allHabits.filter(h => {
-    const d = new Date(h.completed_date);
-    return d.getFullYear() === year && d.getMonth() === month;
-  }).map(h => h.completed_date));
-  // Datas protegidas no mês
-  const shieldDates = new Set((shieldLog || []).filter(l => {
-    if (l.reason !== 'auto') return false;
-    const d = new Date(l.date_protected);
-    return d.getFullYear() === year && d.getMonth() === month;
-  }).map(l => l.date_protected));
-  // Monta grid
-  const weekdayLabels = ['D','S','T','Q','Q','S','S'];
-  let cells = '';
-  for (let i = 0; i < startWeekday; i++) cells += '<div></div>';
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dStr = new Date(year, month, d).toISOString().slice(0,10);
-    const hasHabit = habitDates.has(dStr);
-    const hasShield = shieldDates.has(dStr);
-    const isToday = dStr === tdyStr;
-    const isFuture = dStr > tdyStr;
-    let cellClass = 'aspect-square rounded-xl flex items-center justify-center text-xs font-bold relative ';
-    let inner = '';
-    if (hasHabit) {
-      cellClass += 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md';
-      inner = '<div class="text-base">🔥</div><div class="text-[9px] absolute bottom-0.5 right-1">'+d+'</div>';
-    } else if (hasShield) {
-      cellClass += 'bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md';
-      inner = '<div class="text-base">🛡️</div><div class="text-[9px] absolute bottom-0.5 right-1">'+d+'</div>';
-    } else if (isFuture) {
-      cellClass += 'text-slate-300';
-      inner = d;
-    } else {
-      cellClass += 'bg-slate-100 text-slate-400';
-      inner = d;
-    }
-    if (isToday) cellClass += ' ring-2 ring-blue-700 ring-offset-1';
-    cells += '<div class="'+cellClass+'">'+inner+'</div>';
-  }
-  const fireDays = habitDates.size;
-  const shieldDays = shieldDates.size;
-  // Navegação
-  const prevYear = month === 0 ? year - 1 : year;
-  const prevMonth = month === 0 ? 11 : month - 1;
-  const nextYear = month === 11 ? year + 1 : year;
-  const nextMonth = month === 11 ? 0 : month + 1;
-  const isCurrentOrFuture = (year === now.getFullYear() && month >= now.getMonth()) || year > now.getFullYear();
-  modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this){calendarMonth=null;closeModal();}"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up"><div class="flex items-center justify-between mb-4"><button onclick="openStreakCalendar('+prevYear+','+prevMonth+')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700">←</button><div class="text-center"><div class="text-base font-bold text-slate-900">'+monthNames[month]+' '+year+'</div><div class="text-[10px] text-slate-400 uppercase tracking-wide">Sua ofensiva</div></div><button '+(isCurrentOrFuture?'disabled class="w-9 h-9 rounded-full bg-slate-50 text-slate-300"':'onclick="openStreakCalendar('+nextYear+','+nextMonth+')" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700"')+'>→</button></div><div class="grid grid-cols-7 gap-1 mb-2">'+weekdayLabels.map(w => '<div class="text-center text-[10px] font-bold text-slate-400 uppercase">'+w+'</div>').join('')+'</div><div class="grid grid-cols-7 gap-1 mb-4">'+cells+'</div><div class="bg-slate-50 rounded-xl p-3 flex items-center justify-around text-center mb-3"><div><div class="text-xl">🔥</div><div class="text-lg font-extrabold text-orange-600">'+fireDays+'</div><div class="text-[10px] text-slate-500 font-semibold uppercase">dias de fogo</div></div><div class="w-px h-10 bg-slate-200"></div><div><div class="text-xl">🛡️</div><div class="text-lg font-extrabold text-blue-600">'+shieldDays+'</div><div class="text-[10px] text-slate-500 font-semibold uppercase">escudos usados</div></div></div><button onclick="calendarMonth=null;closeModal();" class="w-full bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Fechar</button></div></div>';
 }
 function tryOpenTourV3() {
   if (localStorage.getItem('tour_v3_done')) return;
