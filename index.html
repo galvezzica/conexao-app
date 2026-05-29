@@ -933,7 +933,7 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.15';
+const APP_VERSION = '2.15.1';
 const CHANGELOG = [
   { v: '2.15', emoji: '🤖', title: 'Chat com o Conex (IA)', items: [
     'Conversa real com a raposa: tira dúvidas de matéria, recebe motivação',
@@ -1852,7 +1852,10 @@ function renderConexChat() {
   if (empty) {
     bubbles = '<div class="text-center py-8"><div class="w-24 h-24 mx-auto mb-3 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-5xl shadow-xl shadow-orange-500/30" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div class="text-lg font-bold text-slate-900 mb-1">E aí, sou o Conex!</div><div class="text-sm text-slate-500 mb-5 px-4 leading-relaxed">Posso te ajudar com notas, estudo, lembretes ou só dar uma força. O que vai ser, mano?</div><div class="space-y-2 px-2">' + suggestions.map(s => '<button onclick="sendConexMessage(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" class="w-full bg-white border border-orange-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-2xl text-left hover:bg-orange-50 transition">💬 ' + s + '</button>').join('') + '</div></div>';
   } else {
-    bubbles = msgs.map(renderConexBubble).join('');
+    bubbles = msgs.map((m, i) => {
+      try { return renderConexBubble(m); }
+      catch(e) { console.error('bubble erro idx=' + i, e, m); return '<div class="text-[10px] text-red-500 p-2">Erro ao mostrar mensagem ' + i + ': ' + (e.message || '?') + '</div>'; }
+    }).join('');
     if (conexState.loading) bubbles += '<div class="flex items-end gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-base flex-shrink-0">🦊</div><div class="bg-slate-100 rounded-2xl rounded-bl-md px-4 py-3"><div class="flex gap-1"><div class="w-2 h-2 bg-slate-400 rounded-full" style="animation: tourBounce 1s ease-in-out infinite;"></div><div class="w-2 h-2 bg-slate-400 rounded-full" style="animation: tourBounce 1s ease-in-out infinite 0.2s;"></div><div class="w-2 h-2 bg-slate-400 rounded-full" style="animation: tourBounce 1s ease-in-out infinite 0.4s;"></div></div></div></div>';
   }
   const limitWarning = remaining <= 3 && remaining > 0 ? '<div class="px-4 py-2 bg-amber-50 border-y border-amber-200 text-[11px] text-amber-700 text-center">Restam ' + remaining + ' mensagens hoje</div>' : remaining === 0 ? '<div class="px-4 py-2 bg-red-50 border-y border-red-200 text-[11px] text-red-700 text-center">Você atingiu o limite de ' + usage.limit + ' mensagens hoje. Tenta de novo amanhã!</div>' : '';
@@ -1887,18 +1890,24 @@ function renderConexBubble(msg) {
   return '<div class="flex items-end gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-base flex-shrink-0">🦊</div><div class="max-w-[78%]"><div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-sm text-slate-800">' + text + '</div>' + toolHtml + '</div></div>';
 }
 function renderConexToolResult(tr) {
-  if (!tr || !tr.result) return '';
-  if (tr.name === 'create_task' && tr.result.ok) {
-    const task = tr.result.task;
-    return '<div class="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs"><div class="font-bold text-emerald-700 mb-1">✅ Tarefa criada</div><div class="text-slate-700"><strong>' + (task?.title || tr.args?.title || '') + '</strong>' + (task?.due_date ? ' · ' + new Date(task.due_date).toLocaleDateString("pt-BR") : '') + '</div></div>';
-  }
-  if (tr.name === 'create_quiz' && tr.result.ok && tr.result.questions?.length) {
-    return '<div class="mt-2 bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs"><div class="font-bold text-violet-700 mb-1">📋 Quiz pronto</div><div class="text-slate-700 mb-2"><strong>' + (tr.result.topic || '') + '</strong> · ' + tr.result.questions.length + ' perguntas</div><button onclick="openConexQuiz(' + JSON.stringify(tr.result.quiz_id || '').replace(/"/g, '&quot;') + ')" class="bg-violet-600 text-white font-bold py-2 px-4 rounded-lg text-xs">Começar quiz →</button></div>';
-  }
-  if (tr.name === 'get_grade_status' && tr.result.ok) {
+  try {
+    if (!tr || !tr.result) return '';
+    if (tr.name === 'create_task' && tr.result.ok) {
+      const task = tr.result.task || {};
+      const title = escapeHtml(task.title || tr.args?.title || '');
+      const date = task.due_date ? ' · ' + new Date(task.due_date).toLocaleDateString('pt-BR') : '';
+      return '<div class="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs"><div class="font-bold text-emerald-700 mb-1">✅ Tarefa criada</div><div class="text-slate-700"><strong>' + title + '</strong>' + date + '</div></div>';
+    }
+    if (tr.name === 'create_quiz' && tr.result.ok && tr.result.questions && tr.result.questions.length) {
+      const topic = escapeHtml(tr.result.topic || '');
+      const qid = String(tr.result.quiz_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      return '<div class="mt-2 bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs"><div class="font-bold text-violet-700 mb-1">📋 Quiz pronto</div><div class="text-slate-700 mb-2"><strong>' + topic + '</strong> · ' + tr.result.questions.length + ' perguntas</div><button onclick="openConexQuiz(\'' + qid + '\')" class="bg-violet-600 text-white font-bold py-2 px-4 rounded-lg text-xs">Começar quiz →</button></div>';
+    }
+    return '';
+  } catch(e) {
+    console.warn('toolResult render erro', e, tr);
     return '';
   }
-  return '';
 }
 async function handleConexSubmit(e) {
   e.preventDefault();
