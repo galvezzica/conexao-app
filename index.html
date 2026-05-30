@@ -394,6 +394,10 @@ let myReactions = new Set(), reactionCounts = {}, expandedId = null;
 let profile = null, currentBim = 1;
 let badges = [], feedPosts = [], feedReactions = [], myFeedReactions = new Set(), feedReactionCounts = {}, communityTab = 'feed';
 let shieldLog = [];
+let pendingAccountType = null;
+let parentChildren = [];
+let parentCurrentChild = null;
+let parentChildData = null;
 let friendships = [], schoolMates = [], friendsTab = 'discover';
 let notifications = [];
 
@@ -442,6 +446,7 @@ async function loadAndRender() {
   });
   profile = pf.data || null;
   currentBim = currentBim || 1;
+  if (profile?.account_type === 'parent') { await loadParentDashboard(); renderParentShell(); return; }
   renderShell();
   // Tour: dispara pra todo mundo que ainda não viu o tour novo (v3)
   // Espera os outros modais (whatsNew, dailyBox) terminarem pra não sobrescrever
@@ -934,8 +939,16 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.15.3';
+const APP_VERSION = '2.16';
 const CHANGELOG = [
+  { v: '2.16', emoji: '👨‍👩‍👧', title: 'Modo Responsável', items: [
+    'Pai, mãe (juntos ou separados), padrasto, madrasta, avós podem acompanhar',
+    'Filho gera código no perfil > Convidar responsável e manda no WhatsApp',
+    'Responsável cadastra conta como responsável e cola o código',
+    'Responsável vê: médias, tarefas, streak, % de hábitos do mês',
+    'Mural de oração, chat com Conex e comunidade ficam 100% privados',
+    'Filho pode desvincular qualquer responsável a qualquer momento',
+  ]},
   { v: '2.15', emoji: '🤖', title: 'Chat com o Conex (IA)', items: [
     'Conversa real com a raposa: tira dúvidas de matéria, recebe motivação',
     'Conex cria lembretes pra você dentro do app',
@@ -1213,7 +1226,7 @@ function smartMessage(overall, subjs) {
 }
 
 function renderAuth() {
-  app.innerHTML = '<div class="min-h-screen flex items-center justify-center px-5 py-10"><div class="w-full max-w-md"><div class="text-center mb-8"><div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg">C</div><div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div><div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div></div><div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100"><div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl"><button onclick="setMode(\'login\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='login'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Entrar</button><button onclick="setMode(\'signup\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='signup'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Criar conta</button></div><form onsubmit="handleAuth(event)" class="space-y-4"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div><button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 rounded-2xl shadow-lg shadow-indigo-500/30">'+(mode==='login'?'Entrar':'Criar minha conta')+'</button><div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div>'+(mode==='login'?'<button type="button" onclick="openForgotPassword()" class="w-full text-xs text-blue-700 font-semibold py-1">Esqueci a senha</button>':'')+'</form></div><div class="text-center text-xs text-slate-400 mt-6">v' + APP_VERSION + '</div></div></div>';
+  app.innerHTML = '<div class="min-h-screen flex items-center justify-center px-5 py-10"><div class="w-full max-w-md"><div class="text-center mb-8"><div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-800 to-indigo-900 rounded-2xl mb-4 text-white text-2xl font-bold shadow-lg">C</div><div class="text-2xl font-bold text-slate-900 mb-1">Conexão</div><div class="text-sm text-slate-500">Sua vida escolar e espiritual no mesmo lugar</div></div><div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100"><div class="flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl"><button onclick="setMode(\'login\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='login'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Entrar</button><button onclick="setMode(\'signup\')" class="flex-1 py-2 rounded-lg font-semibold text-sm '+(mode==='signup'?'bg-white text-slate-900 shadow-sm':'text-slate-500')+'">Criar conta</button></div><form onsubmit="handleAuth(event)" class="space-y-4">' + (mode === 'signup' ? '<div class="grid grid-cols-2 gap-2"><label class="cursor-pointer"><input type="radio" name="acctype" value="child" checked class="peer sr-only"><div class="border-2 border-slate-200 peer-checked:border-blue-700 peer-checked:bg-blue-50 rounded-xl p-3 text-center transition"><div class="text-2xl mb-1">🎒</div><div class="text-xs font-bold text-slate-900">Sou aluno</div></div></label><label class="cursor-pointer"><input type="radio" name="acctype" value="parent" class="peer sr-only"><div class="border-2 border-slate-200 peer-checked:border-orange-500 peer-checked:bg-orange-50 rounded-xl p-3 text-center transition"><div class="text-2xl mb-1">👨‍👩‍👧</div><div class="text-xs font-bold text-slate-900">Sou responsável</div></div></label></div>' : '') + '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Email</label><input type="email" id="email" required autocomplete="email" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Senha</label><input type="password" id="password" required minlength="6" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"><div class="text-xs text-slate-400 mt-1.5">Mínimo 6 caracteres</div></div><button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 rounded-2xl shadow-lg shadow-indigo-500/30">'+(mode==='login'?'Entrar':'Criar minha conta')+'</button><div id="message" class="text-sm text-center hidden px-3 py-2.5 rounded-xl"></div>'+(mode==='login'?'<button type="button" onclick="openForgotPassword()" class="w-full text-xs text-blue-700 font-semibold py-1">Esqueci a senha</button>':'')+'</form></div><div class="text-center text-xs text-slate-400 mt-6">v' + APP_VERSION + '</div></div></div>';
 }
 
 function renderShell() {
@@ -1711,7 +1724,7 @@ function renderProfile() {
   html += '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Idade</label><input id="pf_age" type="number" min="8" max="25" value="'+escapeHtml(age)+'" placeholder="14" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Série</label><input id="pf_grade" type="text" maxlength="30" value="'+escapeHtml(grade)+'" placeholder="9º ano" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div></div><div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Turma (opcional)</label><input id="pf_class" type="text" maxlength="5" value="'+escapeHtml(profile?.class_letter||'')+'" placeholder="Ex: 9A" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Escola</label><input id="pf_school" type="text" maxlength="100" value="'+escapeHtml(school)+'" placeholder="Ex: IAE Tatuí" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-700"></div>';
   html += '<button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold py-2.5 rounded-2xl text-sm shadow-md shadow-indigo-500/30">Salvar</button></form>';
-  html += '<div class="mt-4 space-y-2"><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="openInviteModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">🎁 Convidar amigo (+ tema premium)</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openShieldModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🛡️ Meus escudos</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button>' + adminBtnHtml() + '<button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
+  html += '<div class="mt-4 space-y-2"><button onclick="openChildInviteModal()" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30">👨‍👩‍👧 Convidar responsável</button><button onclick="openChildLinksModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔗 Meus responsáveis</button><button onclick="setTab(\'friends\')" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30">👥 Meus amigos</button><button onclick="openInviteModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">🎁 Convidar amigo (+ tema premium)</button><button onclick="showInstallTutorial()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">📱 Instalar no celular</button><button onclick="askNotifPerm()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🔔 Ativar notificações</button><button onclick="toggleTheme()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">'+(getTheme()==='dark'?'☀️ Modo claro':'🌙 Modo escuro')+'</button><button onclick="showWhatsNew(true)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">✨ Novidades do app</button><button onclick="openShieldModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">🛡️ Meus escudos</button><button onclick="openTour(0)" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Ver tour novamente</button><button onclick="setTab(\'faq\')" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Dúvidas frequentes</button><button onclick="openFeedbackModal()" class="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">💬 Mandar feedback</button>' + adminBtnHtml() + '<button onclick="logout()" class="w-full bg-red-50 border border-red-200 text-red-600 font-semibold py-3 rounded-xl text-sm">Sair</button></div>';
   return html;
 }
 async function saveProfile(e) {
@@ -2254,16 +2267,183 @@ async function handleAuth(e) {
   btn.disabled = true; btn.classList.add('opacity-60');
   showMessage('Aguarde...', 'info');
   if (mode === 'signup') {
-    const { error } = await sb.auth.signUp({ email, password });
-    if (error) showMessage(translateError(error.message), 'error');
-    else showMessage('Conta criada. Agora clica em Entrar.', 'success');
+    const accountType = (document.querySelector('input[name=acctype]:checked')?.value) || 'child';
+    const { error } = await sb.auth.signUp({ email, password, options: { data: { account_type: accountType } } });
+    if (error) { showMessage(translateError(error.message), 'error'); }
+    else { pendingAccountType = accountType; showMessage('Conta criada. Agora clica em Entrar.', 'success'); }
   } else {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) showMessage(translateError(error.message), 'error');
-    else { currentUser = data.user; await loadAndRender(); return; }
+    else {
+      currentUser = data.user;
+      const acctype = pendingAccountType || data.user?.user_metadata?.account_type;
+      if (acctype) {
+        await sb.from('profiles').upsert({ user_id: data.user.id, account_type: acctype }, { onConflict: 'user_id' });
+        pendingAccountType = null;
+      }
+      await loadAndRender();
+      return;
+    }
   }
   btn.disabled = false; btn.classList.remove('opacity-60');
 }
+async function loadParentDashboard() {
+  const { data: links } = await sb.from('parent_links').select('*').eq('status', 'active');
+  parentChildren = [];
+  for (const l of (links || [])) {
+    const { data: pf } = await sb.from('profiles').select('*').eq('user_id', l.child_user_id).maybeSingle();
+    parentChildren.push({ link: l, profile: pf || { user_id: l.child_user_id } });
+  }
+}
+function renderParentShell() {
+  if (parentCurrentChild) { renderParentChildView(); return; }
+  const me = profile?.display_name || (currentUser?.email || '').split('@')[0];
+  let html = '<div class="min-h-screen pb-20"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-5"><div><div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Olá,</div><div class="text-xl font-extrabold text-slate-900">' + escapeHtml(me) + '</div></div><button onclick="parentLogoutMenu()" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm">⚙️</button></div>';
+  html += '<div class="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl p-5 text-white mb-4 shadow-xl"><div class="text-xs uppercase tracking-widest opacity-80 font-bold mb-1">Acompanhamento</div><div class="text-base font-bold">' + parentChildren.length + ' filho(s) vinculado(s)</div><div class="text-xs opacity-90 mt-2 leading-snug">Você vê notas, tarefas e hábitos. Conversas e oração do seu filho ficam privadas.</div></div>';
+  html += '<button onclick="openParentLinkModal()" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3.5 rounded-2xl text-sm shadow-md shadow-orange-500/30 mb-4">+ Vincular outro filho</button>';
+  if (parentChildren.length === 0) {
+    html += '<div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center"><div class="text-4xl mb-3">👨‍👩‍👧</div><div class="text-sm font-bold text-slate-900 mb-1">Sem filhos vinculados ainda</div><div class="text-xs text-slate-500 mb-4 leading-relaxed">Pede pro teu filho gerar um código no perfil dele e cola aqui pra vincular.</div></div>';
+  } else {
+    html += '<div class="space-y-3">';
+    for (const c of parentChildren) {
+      const name = c.profile?.display_name || 'Filho(a)';
+      const grade = c.profile?.grade_level || '';
+      const av = c.profile?.avatar_url ? '<img src="' + c.profile.avatar_url + '" class="w-full h-full object-cover">' : '<div class="w-full h-full bg-gradient-to-br from-blue-700 to-indigo-900 flex items-center justify-center text-white font-bold text-xl">' + (name[0] || '?').toUpperCase() + '</div>';
+      html += '<button onclick="openParentChildView(\'' + c.profile.user_id + '\')" class="w-full bg-white rounded-2xl p-4 border border-slate-100 flex items-center gap-3 text-left hover:shadow-md transition"><div class="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">' + av + '</div><div class="flex-1 min-w-0"><div class="text-sm font-bold text-slate-900">' + escapeHtml(name) + '</div><div class="text-xs text-slate-500">' + escapeHtml(grade || 'Aluno') + '</div></div><div class="text-slate-400 text-xl">→</div></button>';
+    }
+    html += '</div>';
+  }
+  html += '</div></div>';
+  app.innerHTML = html;
+}
+async function openParentChildView(childId) {
+  const child = parentChildren.find(c => c.profile.user_id === childId);
+  if (!child) return;
+  parentCurrentChild = child;
+  const [subRes, taskRes, habitRes] = await Promise.all([
+    sb.from('subjects').select('*, grades(*)').eq('user_id', childId).order('created_at'),
+    sb.from('tasks').select('*').eq('user_id', childId).order('due_date'),
+    sb.from('habit_completions').select('*').eq('user_id', childId).order('completed_date', { ascending: false }).limit(60),
+  ]);
+  parentChildData = { subjects: subRes.data || [], tasks: taskRes.data || [], habits: habitRes.data || [] };
+  renderParentChildView();
+}
+function renderParentChildView() {
+  if (!parentCurrentChild) return;
+  const c = parentCurrentChild;
+  const name = c.profile?.display_name || 'Filho(a)';
+  const grade = c.profile?.grade_level || '';
+  const school = c.profile?.school || '';
+  const av = c.profile?.avatar_url ? '<img src="' + c.profile.avatar_url + '" class="w-full h-full object-cover">' : '<div class="w-full h-full bg-gradient-to-br from-blue-700 to-indigo-900 flex items-center justify-center text-white font-bold text-2xl">' + (name[0] || '?').toUpperCase() + '</div>';
+  const d = parentChildData || { subjects: [], tasks: [], habits: [] };
+  const bim = currentBim;
+  const subsM = d.subjects.map(s => ({ ...s, mean: calcMean(s.grades, bim) }));
+  const validMeans = subsM.map(x => x.mean).filter(x => x !== null);
+  const overall = validMeans.length ? validMeans.reduce((a,b)=>a+b,0)/validMeans.length : null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().slice(0,10);
+  const pending = d.tasks.filter(t => t && !t.completed);
+  const overdue = pending.filter(t => t.due_date && t.due_date < todayStr);
+  const doneWeek = d.tasks.filter(t => t && t.completed && t.completed_at && new Date(t.completed_at) > new Date(Date.now()-7*86400000)).length;
+  const dates = [...new Set(d.habits.map(h => h.completed_date))].sort().reverse();
+  let streak = 0;
+  if (dates.length) {
+    const tdy = new Date().toISOString().slice(0,10);
+    const yst = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    let cur = dates[0] === tdy ? 0 : (dates[0] === yst ? -1 : null);
+    if (cur !== null) {
+      let exp = new Date(); exp.setHours(0,0,0,0); exp.setDate(exp.getDate() + cur);
+      for (const dd of dates) {
+        if (dd === exp.toISOString().slice(0,10)) { streak++; exp.setDate(exp.getDate() - 1); }
+        else break;
+      }
+    }
+  }
+  const monthStart = new Date(); monthStart.setDate(1);
+  const habitsThisMonth = new Set(d.habits.filter(h => new Date(h.completed_date) >= monthStart).map(h => h.completed_date)).size;
+  const monthPct = Math.round((habitsThisMonth / today.getDate()) * 100);
+  let html = '<div class="min-h-screen pb-20"><div class="max-w-md mx-auto px-5 pt-6"><div class="flex items-center justify-between mb-4"><button onclick="parentCurrentChild=null; parentChildData=null; renderParentShell();" class="text-sm text-slate-500 font-semibold">← Voltar</button><button onclick="confirmRevokeChild(\'' + c.link.id + '\', \'' + escapeHtml(name).replace(/[\\\']/g, '') + '\')" class="text-xs text-red-500 font-semibold">Desvincular</button></div>';
+  html += '<div class="bg-white rounded-3xl p-5 mb-4 border border-slate-100 text-center"><div class="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden">' + av + '</div><div class="text-base font-bold text-slate-900">' + escapeHtml(name) + '</div><div class="text-xs text-slate-500 mb-3">' + escapeHtml(grade) + (school ? ' · ' + escapeHtml(school) : '') + '</div></div>';
+  html += '<div class="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl">';
+  for (let b = 1; b <= 4; b++) html += '<button onclick="currentBim=' + b + '; renderParentChildView();" class="flex-1 py-2 rounded-lg text-xs font-bold ' + (currentBim===b?'bg-white text-slate-900 shadow-sm':'text-slate-500') + '">' + b + 'º bim</button>';
+  html += '</div>';
+  html += '<div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-white rounded-2xl p-3 border border-slate-100 text-center"><div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Média</div><div class="text-xl font-extrabold ' + (overall === null ? 'text-slate-400' : overall >= 7 ? 'text-green-600' : overall >= 5 ? 'text-amber-600' : 'text-red-600') + '">' + (overall !== null ? overall.toFixed(1).replace('.', ',') : '—') + '</div></div><div class="bg-white rounded-2xl p-3 border border-slate-100 text-center"><div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Streak</div><div class="text-xl font-extrabold text-orange-600">' + streak + ' 🔥</div></div><div class="bg-white rounded-2xl p-3 border border-slate-100 text-center"><div class="text-[10px] font-bold uppercase text-slate-400 mb-1">Hábitos mês</div><div class="text-xl font-extrabold text-slate-900">' + monthPct + '%</div></div></div>';
+  if (overdue.length > 0) {
+    html += '<div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 flex items-center gap-3"><div class="text-2xl">⚠️</div><div class="flex-1"><div class="text-sm font-bold text-red-700">' + overdue.length + ' tarefa(s) atrasada(s)</div><div class="text-xs text-red-600">Pode ser bom conversar com ' + escapeHtml(name.split(' ')[0]) + '</div></div></div>';
+  }
+  html += '<div class="text-sm font-bold text-slate-900 mb-2 px-1">Notas · ' + bim + 'º bim</div><div class="space-y-2 mb-4">';
+  if (subsM.length === 0) html += '<div class="bg-white border border-slate-100 rounded-2xl p-5 text-center text-xs text-slate-500">Sem matérias cadastradas ainda</div>';
+  else {
+    for (const s of subsM) {
+      const mc = meanColor(s.mean);
+      html += '<div class="bg-white rounded-2xl p-3 border border-slate-100 flex items-center gap-3"><div class="w-10 h-10 rounded-lg ' + mc.bg + ' flex items-center justify-center text-lg">' + (s.emoji || '📚') + '</div><div class="flex-1 min-w-0"><div class="text-sm font-bold text-slate-900 truncate">' + escapeHtml(s.name) + '</div><div class="text-[10px] ' + mc.text + ' font-semibold">' + mc.label + '</div></div><div class="text-xl font-extrabold ' + mc.text + ' px-3 py-1 ' + mc.bg + ' rounded-lg">' + (s.mean !== null ? s.mean.toFixed(1).replace('.', ',') : '—') + '</div></div>';
+    }
+  }
+  html += '</div>';
+  html += '<div class="text-sm font-bold text-slate-900 mb-2 px-1">Tarefas</div><div class="grid grid-cols-3 gap-2 mb-4"><div class="bg-red-50 rounded-2xl p-3 text-center"><div class="text-[10px] font-bold uppercase text-red-600 mb-1">Atrasadas</div><div class="text-xl font-extrabold text-red-700">' + overdue.length + '</div></div><div class="bg-amber-50 rounded-2xl p-3 text-center"><div class="text-[10px] font-bold uppercase text-amber-700 mb-1">Pendentes</div><div class="text-xl font-extrabold text-amber-800">' + pending.length + '</div></div><div class="bg-green-50 rounded-2xl p-3 text-center"><div class="text-[10px] font-bold uppercase text-green-700 mb-1">Feitas semana</div><div class="text-xl font-extrabold text-green-700">' + doneWeek + '</div></div></div>';
+  const fName = name.split(' ')[0];
+  const phoneText = 'Oi ' + fName + '! Vi no Conexão que' + (overdue.length > 0 ? ' você tem ' + overdue.length + ' tarefa(s) atrasada(s).' : (overall !== null && overall < 5 ? ' tua média geral tá em ' + overall.toFixed(1).replace('.', ',') + '. Bora conversar?' : ' tô orgulhoso. Continua assim!'));
+  html += '<button onclick="window.open(\'https://wa.me/?text=\' + encodeURIComponent(\'' + phoneText.replace(/[\\\']/g, '') + '\'), \'_blank\')" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-2xl text-sm shadow-lg shadow-green-500/30 mb-4">📲 Mandar mensagem no WhatsApp</button>';
+  html += '</div></div>';
+  app.innerHTML = html;
+}
+function openParentLinkModal() {
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-5xl mb-3 text-center">🔗</div><div class="text-lg font-bold text-slate-900 mb-1 text-center">Vincular filho</div><div class="text-sm text-slate-600 mb-4 text-center leading-relaxed">Pede pro teu filho ir em Perfil > Convidar responsável. Ele gera um código de 6 caracteres pra você colar aqui.</div><form onsubmit="submitParentLink(event)" class="space-y-3"><input id="parentLinkCode" type="text" maxlength="6" required placeholder="Ex: A3K9P2" autocapitalize="characters" class="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl text-center text-2xl font-extrabold tracking-widest focus:ring-2 focus:ring-orange-400 uppercase"><select id="parentRel" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm bg-white"><option value="">Sou ... (opcional)</option><option value="pai">Pai</option><option value="mae">Mãe</option><option value="madrasta">Madrasta</option><option value="padrasto">Padrasto</option><option value="avo">Avô/Avó</option><option value="tio">Tio/Tia</option><option value="outro">Outro responsável</option></select><div class="flex gap-2 pt-2"><button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button><button type="submit" class="flex-1 bg-orange-500 text-white font-bold py-2.5 rounded-2xl text-sm">Vincular</button></div></form></div></div>';
+  setTimeout(() => document.getElementById('parentLinkCode')?.focus(), 100);
+}
+async function submitParentLink(e) {
+  e.preventDefault();
+  const code = (document.getElementById('parentLinkCode')?.value || '').trim().toUpperCase();
+  const rel = document.getElementById('parentRel')?.value || null;
+  if (!code) return;
+  const { data, error } = await sb.rpc('accept_parent_link', { p_code: code, p_relationship: rel });
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  if (!data?.ok) {
+    const msgMap = { invalid_code: 'Código inválido ou expirado', cant_link_self: 'Não dá pra se vincular a si mesmo', already_linked: 'Já tá vinculado a esse filho' };
+    toast(msgMap[data?.reason] || 'Não consegui vincular', 'error');
+    return;
+  }
+  toast('Vinculado!', 'success');
+  closeModal();
+  await loadParentDashboard();
+  renderParentShell();
+}
+async function confirmRevokeChild(linkId, name) {
+  if (!confirm('Desvincular de ' + name + '? Não vai mais ver os dados dele.')) return;
+  const { data, error } = await sb.rpc('revoke_parent_link', { p_link_id: linkId });
+  if (error || !data) { toast('Não consegui desvincular', 'error'); return; }
+  toast('Desvinculado', 'success');
+  parentCurrentChild = null; parentChildData = null;
+  if (profile?.account_type === 'parent') { await loadParentDashboard(); renderParentShell(); }
+  else { closeModal(); }
+}
+function parentLogoutMenu() { if (confirm('Sair da conta?')) logout(); }
+async function openChildInviteModal() {
+  modalEl.classList.remove('hidden');
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up text-center"><div class="text-4xl mb-3">⏳</div><div class="text-sm text-slate-500">Gerando código...</div></div></div>';
+  const { data: code, error } = await sb.rpc('generate_parent_link_code');
+  if (error || !code) {
+    modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up text-center"><div class="text-5xl mb-3">😅</div><div class="text-base font-bold mb-2">Não consegui gerar o código</div><button onclick="closeModal()" class="bg-slate-100 px-5 py-2 rounded-xl text-sm">Fechar</button></div></div>';
+    return;
+  }
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl anim-up"><div class="text-center mb-4"><div class="text-5xl mb-2">👨‍👩‍👧</div><div class="text-lg font-bold text-slate-900">Código pra teu responsável</div><div class="text-xs text-slate-500 mt-1 px-2 leading-relaxed">Manda esse código pra pai/mãe. Eles cadastram conta como responsável e colam o código.</div></div><div class="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-5 text-center mb-4"><div class="text-xs text-slate-500 mb-1">Seu código</div><div class="text-3xl font-extrabold text-orange-700 tracking-[0.3em]">' + code + '</div><div class="text-[10px] text-slate-400 mt-2">Válido até alguém usar</div></div><button onclick="shareChildInvite(\'' + code + '\')" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-2xl text-sm flex items-center justify-center gap-2 mb-2 shadow-lg shadow-green-500/30">📲 Compartilhar no WhatsApp</button><button onclick="closeModal()" class="w-full text-slate-400 text-sm py-2">Fechar</button></div></div>';
+}
+async function shareChildInvite(code) {
+  const text = 'Oi! Baixa o app Conexão e cadastra como responsável. Cola esse código pra acompanhar minhas notas: ' + code + ' · ' + window.location.origin;
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch {} }
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+async function openChildLinksModal() {
+  const { data: links } = await sb.from('parent_links').select('*').eq('status', 'active');
+  modalEl.classList.remove('hidden');
+  let inner = '<div class="text-lg font-bold text-slate-900 mb-3 text-center">Meus responsáveis</div>';
+  if (!links || links.length === 0) inner += '<div class="text-center text-sm text-slate-500 py-4">Nenhum responsável vinculado.</div>';
+  else inner += '<div class="space-y-2">' + links.map(l => '<div class="bg-slate-50 rounded-xl p-3 flex items-center gap-3"><div class="text-2xl">👤</div><div class="flex-1 text-sm font-semibold text-slate-800">' + (l.relationship ? l.relationship.charAt(0).toUpperCase() + l.relationship.slice(1) : 'Responsável') + '</div><button onclick="confirmRevokeChild(\'' + l.id + '\', \'esse responsável\')" class="text-xs text-red-500 font-semibold">Remover</button></div>').join('') + '</div>';
+  inner += '<button onclick="closeModal()" class="w-full bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl text-sm mt-4">Fechar</button>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up">' + inner + '</div></div>';
+}
+
 async function logout() {
   await sb.auth.signOut();
   currentUser = null; subjects = []; tasks = []; prayers = []; allHabits = []; profile = null; expandedId = null; currentTab = 'home';
