@@ -939,8 +939,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.16';
+const APP_VERSION = '2.17';
 const CHANGELOG = [
+  { v: '2.17', emoji: '📷', title: 'Conex vê e ouve', items: [
+    'Botão 📷 no chat: manda foto da lição e o Conex ajuda',
+    'Botão 🎤 no chat: grava áudio (Conex transcreve e responde)',
+    'Foto usa modelo de visão (Llama 4 Scout)',
+    'Áudio usa Whisper pra transcrição em PT-BR',
+  ]},
   { v: '2.16', emoji: '👨‍👩‍👧', title: 'Modo Responsável', items: [
     'Pai, mãe (juntos ou separados), padrasto, madrasta, avós podem acompanhar',
     'Filho gera código no perfil > Convidar responsável e manda no WhatsApp',
@@ -1877,7 +1883,8 @@ function renderConexChat() {
   }
   const limitWarning = remaining <= 3 && remaining > 0 ? '<div class="px-4 py-2 bg-amber-50 border-y border-amber-200 text-[11px] text-amber-700 text-center">Restam ' + remaining + ' mensagens hoje</div>' : remaining === 0 ? '<div class="px-4 py-2 bg-red-50 border-y border-red-200 text-[11px] text-red-700 text-center">Você atingiu o limite de ' + usage.limit + ' mensagens hoje. Tenta de novo amanhã!</div>' : '';
   const disabledInput = remaining === 0 || conexState.loading;
-  try { modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0"><form onsubmit="handleConexSubmit(event)" class="flex gap-2"><input id="conexInput" type="text" placeholder="Escreve pro Conex..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form></div></div>';
+  const recIndicator = conexRecording ? '<div class="absolute inset-x-0 top-0 -translate-y-full bg-red-500 text-white px-3 py-2 flex items-center gap-2 shadow-lg"><div class="w-2 h-2 bg-white rounded-full" style="animation: tourBounce 1s ease-in-out infinite;"></div><div class="text-xs font-bold">Gravando... <span id="conexRecTimer">00:00</span></div><button onclick="conexStopRecording()" class="ml-auto bg-white text-red-500 text-xs font-bold px-3 py-1 rounded-full">Parar</button></div>' : '';
+  try { modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0 relative">' + recIndicator + '<form onsubmit="handleConexSubmit(event)" class="flex gap-2 items-center"><button type="button" onclick="conexPickImage()" class="w-9 h-9 flex items-center justify-center text-slate-500 text-xl ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Foto da lição">📷</button><button type="button" onclick="conexToggleRecording()" id="conexMicBtn" class="w-9 h-9 flex items-center justify-center text-slate-500 text-xl ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Áudio">🎤</button><input id="conexInput" type="text" placeholder="Escreve, fala ou manda foto..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form><input id="conexFileInput" type="file" accept="image/*" capture="environment" onchange="conexHandleImage(event)" class="hidden"></div></div>';
   setTimeout(() => {
     const el = document.getElementById('conexBubbles');
     if (el) el.scrollTop = el.scrollHeight;
@@ -2444,6 +2451,160 @@ async function openChildLinksModal() {
   modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up">' + inner + '</div></div>';
 }
 
+
+// === CONEX: FOTO E AUDIO ===
+let conexMediaRecorder = null;
+let conexAudioChunks = [];
+let conexRecording = false;
+let conexRecordingTimer = null;
+
+function conexPickImage() {
+  if (conexState.loading) return;
+  document.getElementById('conexFileInput')?.click();
+}
+
+async function conexHandleImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = ''; // reset
+  if (!currentUser) return;
+  if (file.size > 8 * 1024 * 1024) { toast('Foto muito grande (máx 8MB)', 'error'); return; }
+  conexState.loading = true;
+  renderConexChat();
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+    const { error: upErr } = await sb.storage.from('conex-uploads').upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) { conexState.loading = false; renderConexChat(); toast('Erro upload: ' + upErr.message, 'error'); return; }
+    const { data: signed } = await sb.storage.from('conex-uploads').createSignedUrl(path, 600);
+    if (!signed?.signedUrl) { conexState.loading = false; renderConexChat(); toast('Erro ao gerar URL', 'error'); return; }
+    await sendConexMessageWithImage('Olha essa foto pra mim', signed.signedUrl);
+  } catch (err) {
+    conexState.loading = false;
+    renderConexChat();
+    toast('Erro ao enviar foto', 'error');
+  }
+}
+
+async function sendConexMessageWithImage(text, imageUrl) {
+  if (conexState.usage.used >= conexState.usage.limit) {
+    conexState.loading = false;
+    renderConexChat();
+    toast('Limite de hoje atingido', 'error');
+    return;
+  }
+  conexState.messages.push({ role: 'user', content: text, image_url: imageUrl });
+  conexState.loading = true;
+  renderConexChat();
+  try {
+    const ctx = buildConexContext();
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/chat-conex', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ messages: conexState.messages.map(m => ({ role: m.role, content: m.content, image_url: m.image_url })), context: ctx })
+    });
+    if (resp.status === 429) {
+      const d = await resp.json();
+      conexState.usage = { used: d.used, limit: d.limit };
+      conexState.loading = false; renderConexChat();
+      toast('Limite de ' + d.limit + ' mensagens hoje', 'error');
+      return;
+    }
+    const data = await resp.json();
+    if (data.error) {
+      conexState.loading = false;
+      conexState.messages.push({ role: 'assistant', content: 'Não consegui ver a foto direito. Tenta de novo?' });
+      renderConexChat();
+      return;
+    }
+    conexState.messages.push({ role: 'assistant', content: data.reply, tool_results: data.tool_results });
+    if (data.usage) conexState.usage = data.usage;
+    conexState.loading = false;
+    renderConexChat();
+  } catch (err) {
+    conexState.loading = false;
+    renderConexChat();
+    toast('Sem conexão', 'error');
+  }
+}
+
+async function conexToggleRecording() {
+  if (conexState.loading && !conexRecording) return;
+  if (conexRecording) {
+    conexStopRecording();
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) { toast('Áudio não suportado nesse navegador', 'error'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    conexAudioChunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    conexMediaRecorder = new MediaRecorder(stream, { mimeType });
+    conexMediaRecorder.ondataavailable = (ev) => { if (ev.data.size > 0) conexAudioChunks.push(ev.data); };
+    conexMediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(conexAudioChunks, { type: mimeType });
+      if (blob.size < 500) { toast('Áudio muito curto', 'error'); conexRecording = false; renderConexChat(); return; }
+      await conexTranscribeAndSend(blob, mimeType);
+    };
+    conexMediaRecorder.start();
+    conexRecording = true;
+    conexRecordingTimer = { start: Date.now() };
+    renderConexChat();
+    // atualiza contador visual a cada segundo
+    const timerInterval = setInterval(() => {
+      if (!conexRecording) { clearInterval(timerInterval); return; }
+      const el = document.getElementById('conexRecTimer');
+      if (el) {
+        const secs = Math.floor((Date.now() - conexRecordingTimer.start) / 1000);
+        el.textContent = String(Math.floor(secs/60)).padStart(2,'0') + ':' + String(secs%60).padStart(2,'0');
+      }
+      if ((Date.now() - conexRecordingTimer.start) > 60000) conexStopRecording();
+    }, 500);
+  } catch (err) {
+    toast('Não consegui acessar o microfone', 'error');
+  }
+}
+
+function conexStopRecording() {
+  if (!conexRecording || !conexMediaRecorder) return;
+  try { conexMediaRecorder.stop(); } catch(e) {}
+  conexRecording = false;
+  renderConexChat();
+}
+
+async function conexTranscribeAndSend(blob, mimeType) {
+  conexState.loading = true;
+  renderConexChat();
+  try {
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const form = new FormData();
+    form.append('audio', new File([blob], 'audio.' + ext, { type: mimeType }));
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/transcribe-conex', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON_KEY },
+      body: form
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.text) {
+      conexState.loading = false;
+      renderConexChat();
+      toast('Não consegui transcrever', 'error');
+      return;
+    }
+    conexState.loading = false;
+    renderConexChat();
+    // envia como mensagem normal
+    await sendConexMessage(data.text.trim());
+  } catch (err) {
+    conexState.loading = false;
+    renderConexChat();
+    toast('Erro ao transcrever', 'error');
+  }
+}
+
 async function logout() {
   await sb.auth.signOut();
   currentUser = null; subjects = []; tasks = []; prayers = []; allHabits = []; profile = null; expandedId = null; currentTab = 'home';
@@ -2483,7 +2644,17 @@ if (window.location.hash.includes('type=recovery') || window.location.search.inc
   });
   setTimeout(() => { if (window.location.hash.includes('type=recovery')) renderResetPassword(); }, 500);
 }
+// Expor globais para features Fase 1
+window.sb = sb;
+window.SUPABASE_URL = SUPABASE_URL;
+Object.defineProperty(window, 'currentUser', { get: () => currentUser });
+Object.defineProperty(window, 'allHabits', { get: () => allHabits });
+Object.defineProperty(window, 'tasks', { get: () => tasks });
+Object.defineProperty(window, 'subjects', { get: () => subjects });
+window.closeModal = window.closeModal || function() { document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').innerHTML = ''; };
+
 checkAuth();
 </script>
+<script src="/features-fase1.js"></script>
 </body>
 </html>
