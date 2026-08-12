@@ -379,7 +379,7 @@ const FAQS = [
 ];
 
 const TOUR_STEPS = [
-  { tab: null, target: null, title: 'E aí, mano!', text: 'Sou o Conex 🦊, raposa esperta que vai te ensinar a usar essa parada. Bora dar um rolê?' },
+  { tab: null, target: null, title: 'Oi, tudo bem?', text: 'Sou o Conex, vou te ajudar a usar o app. Vamos começar?' },
   { tab: null, target: '[data-tour="nav-grades"]', title: 'Saca só as abas', text: 'Tá vendo essa barrinha embaixo? Cada ícone é uma parte do app. Toca em Notas aí pra começar.' },
   { tab: 'grades', target: '[data-tour="add-subject-btn"]', title: 'Bora cadastrar', text: 'Aperta esse + Matéria aqui. É onde você adiciona Matemática, História, essas coisas que a escola te empurra.' },
   { tab: 'grades', target: null, title: 'Ó o esquema, mano', text: 'Cadastra TUDO que entra no boletim. Prova, trabalho, participação, atividade contínua. Se faltar alguma, a média fica 6 7 (mais ou menos) com a do colégio.' },
@@ -939,8 +939,14 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.17.1';
+const APP_VERSION = '2.18';
 const CHANGELOG = [
+  { v: '2.18', emoji: '💬', title: 'Conex mais natural', items: [
+    'Tom mais normal e amigável, menos gírias',
+    'Foto vai como base64 (Conex consegue ver melhor)',
+    'Removidas tags <function=...> que vazavam no texto',
+    'Textos revisados no tour, menu e chat',
+  ]},
   { v: '2.17', emoji: '📷', title: 'Conex vê e ouve', items: [
     'Botão 📷 no chat: manda foto da lição e o Conex ajuda',
     'Botão 🎤 no chat: grava áudio (Conex transcreve e responde)',
@@ -1844,7 +1850,7 @@ function tryOpenTourV3() {
 }
 function openConexMenu() {
   modalEl.classList.remove('hidden');
-  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up"><div class="flex items-center gap-3 mb-4"><div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-3xl shadow-lg" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div><div class="text-[10px] uppercase tracking-widest font-bold text-orange-600">Conex</div><div class="text-base font-bold text-slate-900">E aí, no que dá pra te ajudar?</div></div></div><div class="space-y-2"><button onclick="closeModal(); openConexChat();" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4 shadow-md shadow-orange-500/30"><span class="text-xl">💬</span><div class="text-left flex-1"><div>Conversar comigo</div><div class="text-[10px] font-normal opacity-90">Dúvidas, motivação, quiz, lembretes</div></div></button><button onclick="closeModal(); openTour(0);" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">🎬</span><div class="text-left flex-1"><div>Ver o tour de novo</div><div class="text-[10px] font-normal text-slate-400">Como usar o app</div></div></button><button onclick="closeModal(); setTab(\'faq\');" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">❓</span><div class="text-left flex-1"><div>Dúvidas frequentes</div><div class="text-[10px] font-normal text-slate-400">Perguntas comuns da galera</div></div></button><button onclick="closeModal(); openFeedbackModal();" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">📨</span><div class="text-left flex-1"><div>Mandar feedback ou bug</div><div class="text-[10px] font-normal text-slate-400">Achou algo estranho? Me conta</div></div></button><button onclick="closeModal();" class="w-full bg-slate-100 text-slate-600 font-semibold py-2.5 rounded-xl text-sm mt-3">Fechar</button></div></div></div>';
+  modalEl.innerHTML = '<div class="fixed inset-0 modal-bg flex items-end sm:items-center justify-center z-50" onclick="if(event.target===this)closeModal()"><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-2xl anim-up"><div class="flex items-center gap-3 mb-4"><div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-3xl shadow-lg" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div><div class="text-[10px] uppercase tracking-widest font-bold text-orange-600">Conex</div><div class="text-base font-bold text-slate-900">Como posso ajudar?</div></div></div><div class="space-y-2"><button onclick="closeModal(); openConexChat();" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4 shadow-md shadow-orange-500/30"><span class="text-xl">💬</span><div class="text-left flex-1"><div>Conversar com o Conex</div><div class="text-[10px] font-normal opacity-90">Dúvidas, revisão de matéria, lembretes</div></div></button><button onclick="closeModal(); openTour(0);" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">🎬</span><div class="text-left flex-1"><div>Ver o tour de novo</div><div class="text-[10px] font-normal text-slate-400">Como usar o app</div></div></button><button onclick="closeModal(); setTab(\'faq\');" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">❓</span><div class="text-left flex-1"><div>Dúvidas frequentes</div><div class="text-[10px] font-normal text-slate-400">Perguntas frequentes</div></div></button><button onclick="closeModal(); openFeedbackModal();" class="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-2xl text-sm flex items-center gap-3 px-4"><span class="text-xl">📨</span><div class="text-left flex-1"><div>Mandar feedback ou bug</div><div class="text-[10px] font-normal text-slate-400">Reporte um problema ou sugestão</div></div></button><button onclick="closeModal();" class="w-full bg-slate-100 text-slate-600 font-semibold py-2.5 rounded-xl text-sm mt-3">Fechar</button></div></div></div>';
 }
 let conexState = { messages: [], loading: false, usage: { used: 0, limit: 20 }, ready: false };
 async function openConexChat() {
@@ -1870,10 +1876,10 @@ function renderConexChat() {
   const empty = msgs.length === 0;
   const usage = conexState.usage;
   const remaining = Math.max(0, usage.limit - usage.used);
-  const suggestions = ['Me explica peso de avaliação','Como tô nas minhas matérias?','Me faz quiz de matemática (frações)','Me lembra estudar amanhã às 19h','Tô estressado, me motiva'];
+  const suggestions = ['Me explique como funciona o peso','Como estou nas minhas matérias?','Me faça um quiz de frações','Lembra de eu estudar amanhã às 19h','Estou desanimado, pode me motivar?'];
   let bubbles = '';
   if (empty) {
-    bubbles = '<div class="text-center py-8"><div class="w-24 h-24 mx-auto mb-3 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-5xl shadow-xl shadow-orange-500/30" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div class="text-lg font-bold text-slate-900 mb-1">E aí, sou o Conex!</div><div class="text-sm text-slate-500 mb-5 px-4 leading-relaxed">Posso te ajudar com notas, estudo, lembretes ou só dar uma força. O que vai ser, mano?</div><div class="space-y-2 px-2">' + suggestions.map(s => '<button onclick="sendConexMessage(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" class="w-full bg-white border border-orange-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-2xl text-left hover:bg-orange-50 transition">💬 ' + s + '</button>').join('') + '</div></div>';
+    bubbles = '<div class="text-center py-8"><div class="w-24 h-24 mx-auto mb-3 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-5xl shadow-xl shadow-orange-500/30" style="animation: tourBounce 2s ease-in-out infinite;">🦊</div><div class="text-lg font-bold text-slate-900 mb-1">Olá, sou o Conex.</div><div class="text-sm text-slate-500 mb-5 px-4 leading-relaxed">Posso ajudar com dúvidas de matéria, notas, lembretes ou revisão.</div><div class="space-y-2 px-2">' + suggestions.map(s => '<button onclick="sendConexMessage(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" class="w-full bg-white border border-orange-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-2xl text-left hover:bg-orange-50 transition">💬 ' + s + '</button>').join('') + '</div></div>';
   } else {
     bubbles = msgs.map((m, i) => {
       try { return renderConexBubble(m); }
@@ -1884,7 +1890,7 @@ function renderConexChat() {
   const limitWarning = remaining <= 3 && remaining > 0 ? '<div class="px-4 py-2 bg-amber-50 border-y border-amber-200 text-[11px] text-amber-700 text-center">Restam ' + remaining + ' mensagens hoje</div>' : remaining === 0 ? '<div class="px-4 py-2 bg-red-50 border-y border-red-200 text-[11px] text-red-700 text-center">Você atingiu o limite de ' + usage.limit + ' mensagens hoje. Tenta de novo amanhã!</div>' : '';
   const disabledInput = remaining === 0 || conexState.loading;
   const recIndicator = conexRecording ? '<div class="absolute inset-x-0 top-0 -translate-y-full bg-red-500 text-white px-3 py-2 flex items-center gap-2 shadow-lg"><div class="w-2 h-2 bg-white rounded-full" style="animation: tourBounce 1s ease-in-out infinite;"></div><div class="text-xs font-bold">Gravando... <span id="conexRecTimer">00:00</span></div><button onclick="conexStopRecording()" class="ml-auto bg-white text-red-500 text-xs font-bold px-3 py-1 rounded-full">Parar</button></div>' : '';
-  try { modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0 relative">' + recIndicator + '<form onsubmit="handleConexSubmit(event)" class="flex gap-2 items-center"><button type="button" onclick="conexPickImage()" class="w-9 h-9 flex items-center justify-center text-slate-500 text-xl ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Foto da lição">📷</button><button type="button" onclick="conexToggleRecording()" id="conexMicBtn" class="w-9 h-9 flex items-center justify-center text-xl ' + (conexRecording ? 'text-red-500 animate-pulse' : 'text-slate-500') + ' ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Áudio">🎤</button><input id="conexInput" type="text" placeholder="Escreve, fala ou manda foto..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form><input id="conexFileInput" type="file" accept="image/*" capture="environment" onchange="conexHandleImage(event)" class="hidden"></div></div>';
+  try { modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Online') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0 relative">' + recIndicator + '<form onsubmit="handleConexSubmit(event)" class="flex gap-2 items-center"><button type="button" onclick="conexPickImage()" class="w-9 h-9 flex items-center justify-center text-slate-500 text-xl ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Foto da lição">📷</button><button type="button" onclick="conexToggleRecording()" id="conexMicBtn" class="w-9 h-9 flex items-center justify-center text-xl ' + (conexRecording ? 'text-red-500 animate-pulse' : 'text-slate-500') + ' ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Áudio">🎤</button><input id="conexInput" type="text" placeholder="Escreva, fale ou envie foto..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form><input id="conexFileInput" type="file" accept="image/*" capture="environment" onchange="conexHandleImage(event)" class="hidden"></div></div>';
   setTimeout(() => {
     const el = document.getElementById('conexBubbles');
     if (el) el.scrollTop = el.scrollHeight;
@@ -1978,11 +1984,13 @@ async function sendConexMessage(text) {
     const data = await resp.json();
     if (data.error) {
       conexState.loading = false;
-      conexState.messages.push({ role: 'assistant', content: 'Putz, deu ruim aqui. Tenta de novo? (' + (data.error || '') + ')' });
+      conexState.messages.push({ role: 'assistant', content: 'Deu erro aqui. Pode tentar de novo? (' + (data.error || '') + ')' });
       renderConexChat();
       return;
     }
-    conexState.messages.push({ role: 'assistant', content: data.reply, tool_results: data.tool_results });
+    // Remove tags <function=...> que o modelo às vezes escreve no texto
+    const cleanReply = (data.reply || '').replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').replace(/<function_call>[\s\S]*?<\/function_call>/g, '').trim();
+    conexState.messages.push({ role: 'assistant', content: cleanReply || data.reply, tool_results: data.tool_results });
     if (data.usage) conexState.usage = data.usage;
     conexState.loading = false;
     renderConexChat();
@@ -1993,7 +2001,7 @@ async function sendConexMessage(text) {
     }
   } catch (e) {
     conexState.loading = false;
-    conexState.messages.push({ role: 'assistant', content: 'Tô sem conexão aqui, dá um refresh e tenta de novo?' });
+    conexState.messages.push({ role: 'assistant', content: 'Sem conexão. Atualize e tenta novamente.' });
     renderConexChat();
   }
 }
@@ -2061,7 +2069,7 @@ async function maybeConsumeShield() {
   const { data, error } = await sb.rpc('consume_shield', { date_to_protect: yst });
   if (error) { console.warn('consume_shield erro', error); return; }
   if (data === true) {
-    toast('🛡️ Escudo usado! Ofensiva mantida.', 'success');
+    toast('Escudo usado. Ofensiva mantida.', 'success');
     if (profile) profile.streak_shields = Math.max(0, (profile.streak_shields||0) - 1);
     shieldLog.unshift({ date_protected: yst, reason: 'auto', used_at: new Date().toISOString() });
     renderShell();
@@ -2474,18 +2482,38 @@ async function conexHandleImage(e) {
   conexState.loading = true;
   renderConexChat();
   try {
+    // Reduz a foto pra ~1024px + converte pra base64 (evita problema de acesso da URL pelo modelo)
+    const dataUrl = await resizeImageToDataUrl(file, 1024, 0.75);
+    // Upload async pro storage (pra ter backup, mas não bloqueia)
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
     const path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-    const { error: upErr } = await sb.storage.from('conex-uploads').upload(path, file, { contentType: file.type, upsert: false });
-    if (upErr) { conexState.loading = false; renderConexChat(); toast('Erro upload: ' + upErr.message, 'error'); return; }
-    const { data: signed } = await sb.storage.from('conex-uploads').createSignedUrl(path, 600);
-    if (!signed?.signedUrl) { conexState.loading = false; renderConexChat(); toast('Erro ao gerar URL', 'error'); return; }
-    await sendConexMessageWithImage('Olha essa foto pra mim', signed.signedUrl);
+    sb.storage.from('conex-uploads').upload(path, file, { contentType: file.type, upsert: false }).catch(() => {});
+    await sendConexMessageWithImage('Olha essa foto pra mim', dataUrl);
   } catch (err) {
     conexState.loading = false;
     renderConexChat();
     toast('Erro ao enviar foto', 'error');
   }
+}
+
+function resizeImageToDataUrl(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > h && w > maxDim) { h = h * (maxDim / w); w = maxDim; }
+      else if (h > maxDim) { w = w * (maxDim / h); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img load')); };
+    img.src = url;
+  });
 }
 
 async function sendConexMessageWithImage(text, imageUrl) {
@@ -2516,11 +2544,12 @@ async function sendConexMessageWithImage(text, imageUrl) {
     const data = await resp.json();
     if (data.error) {
       conexState.loading = false;
-      conexState.messages.push({ role: 'assistant', content: 'Não consegui ver a foto direito. Tenta de novo?' });
+      conexState.messages.push({ role: 'assistant', content: 'Não consegui ver a foto. Pode enviar de novo?' });
       renderConexChat();
       return;
     }
-    conexState.messages.push({ role: 'assistant', content: data.reply, tool_results: data.tool_results });
+    const cleanReply2 = (data.reply || '').replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').replace(/<function_call>[\s\S]*?<\/function_call>/g, '').trim();
+    conexState.messages.push({ role: 'assistant', content: cleanReply2 || data.reply, tool_results: data.tool_results });
     if (data.usage) conexState.usage = data.usage;
     conexState.loading = false;
     renderConexChat();
