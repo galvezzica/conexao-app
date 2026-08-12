@@ -939,7 +939,7 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.17';
+const APP_VERSION = '2.17.1';
 const CHANGELOG = [
   { v: '2.17', emoji: '📷', title: 'Conex vê e ouve', items: [
     'Botão 📷 no chat: manda foto da lição e o Conex ajuda',
@@ -1884,7 +1884,7 @@ function renderConexChat() {
   const limitWarning = remaining <= 3 && remaining > 0 ? '<div class="px-4 py-2 bg-amber-50 border-y border-amber-200 text-[11px] text-amber-700 text-center">Restam ' + remaining + ' mensagens hoje</div>' : remaining === 0 ? '<div class="px-4 py-2 bg-red-50 border-y border-red-200 text-[11px] text-red-700 text-center">Você atingiu o limite de ' + usage.limit + ' mensagens hoje. Tenta de novo amanhã!</div>' : '';
   const disabledInput = remaining === 0 || conexState.loading;
   const recIndicator = conexRecording ? '<div class="absolute inset-x-0 top-0 -translate-y-full bg-red-500 text-white px-3 py-2 flex items-center gap-2 shadow-lg"><div class="w-2 h-2 bg-white rounded-full" style="animation: tourBounce 1s ease-in-out infinite;"></div><div class="text-xs font-bold">Gravando... <span id="conexRecTimer">00:00</span></div><button onclick="conexStopRecording()" class="ml-auto bg-white text-red-500 text-xs font-bold px-3 py-1 rounded-full">Parar</button></div>' : '';
-  try { modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0 relative">' + recIndicator + '<form onsubmit="handleConexSubmit(event)" class="flex gap-2 items-center"><button type="button" onclick="conexPickImage()" class="w-9 h-9 flex items-center justify-center text-slate-500 text-xl ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Foto da lição">📷</button><button type="button" onclick="conexToggleRecording()" id="conexMicBtn" class="w-9 h-9 flex items-center justify-center text-slate-500 text-xl ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Áudio">🎤</button><input id="conexInput" type="text" placeholder="Escreve, fala ou manda foto..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form><input id="conexFileInput" type="file" accept="image/*" capture="environment" onchange="conexHandleImage(event)" class="hidden"></div></div>';
+  try { modalEl.innerHTML = '<div class="fixed inset-0 z-50 bg-white flex flex-col"><div class="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0"><button onclick="closeConexChat()" class="text-white text-lg w-8 h-8 flex items-center justify-center">←</button><div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">🦊</div><div class="flex-1"><div class="text-sm font-bold">Conex</div><div class="text-[10px] opacity-90">' + (conexState.loading ? 'Digitando...' : 'Tô online ✓') + '</div></div><div class="text-[10px] opacity-90 bg-white/15 px-2 py-1 rounded-full font-bold">' + usage.used + '/' + usage.limit + '</div></div>' + limitWarning + '<div id="conexBubbles" class="flex-1 overflow-y-auto p-4 bg-slate-50">' + bubbles + '</div><div class="border-t border-slate-200 p-3 bg-white flex-shrink-0 relative">' + recIndicator + '<form onsubmit="handleConexSubmit(event)" class="flex gap-2 items-center"><button type="button" onclick="conexPickImage()" class="w-9 h-9 flex items-center justify-center text-slate-500 text-xl ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Foto da lição">📷</button><button type="button" onclick="conexToggleRecording()" id="conexMicBtn" class="w-9 h-9 flex items-center justify-center text-xl ' + (conexRecording ? 'text-red-500 animate-pulse' : 'text-slate-500') + ' ' + (disabledInput ? 'opacity-30' : '') + '" ' + (disabledInput ? 'disabled' : '') + ' title="Áudio">🎤</button><input id="conexInput" type="text" placeholder="Escreve, fala ou manda foto..." class="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" ' + (disabledInput ? 'disabled' : '') + ' maxlength="500"><button type="submit" class="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md ' + (disabledInput ? 'opacity-50' : '') + '" ' + (disabledInput ? 'disabled' : '') + '>➤</button></form><input id="conexFileInput" type="file" accept="image/*" capture="environment" onchange="conexHandleImage(event)" class="hidden"></div></div>';
   setTimeout(() => {
     const el = document.getElementById('conexBubbles');
     if (el) el.scrollTop = el.scrollHeight;
@@ -1897,11 +1897,13 @@ function renderConexChat() {
   }
 }
 function closeConexChat() {
+  if (conexRecording) { try { conexStopRecording(); } catch(e) {} }
   closeModal();
 }
 function renderConexBubble(msg) {
   const isUser = msg.role === 'user';
   const text = escapeHtml(msg.content || '').replace(/\n/g, '<br>');
+  const imgHtml = msg.image_url ? '<img src="' + msg.image_url + '" class="max-w-full rounded-xl mt-2 max-h-64 object-cover" onerror="this.style.display=&quot;none&quot;">' : '';
   let toolHtml = '';
   try {
     let trs = msg.tool_results;
@@ -1909,7 +1911,7 @@ function renderConexBubble(msg) {
     if (trs && Array.isArray(trs)) toolHtml = trs.map(renderConexToolResult).join('');
   } catch(e) { console.warn('tool_results parse', e); }
   if (isUser) {
-    return '<div class="flex justify-end mb-3"><div class="bg-orange-500 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[78%] text-sm shadow-sm">' + text + '</div></div>';
+    return '<div class="flex justify-end mb-3"><div class="bg-orange-500 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[78%] text-sm shadow-sm">' + text + imgHtml + '</div></div>';
   }
   return '<div class="flex items-end gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-base flex-shrink-0">🦊</div><div class="max-w-[78%]"><div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-sm text-slate-700">' + text + '</div>' + toolHtml + '</div></div>';
 }
