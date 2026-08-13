@@ -939,7 +939,7 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.18';
+const APP_VERSION = '2.18.1';
 const CHANGELOG = [
   { v: '2.18', emoji: '💬', title: 'Conex mais natural', items: [
     'Tom mais normal e amigável, menos gírias',
@@ -1908,7 +1908,9 @@ function closeConexChat() {
 }
 function renderConexBubble(msg) {
   const isUser = msg.role === 'user';
-  const text = escapeHtml(msg.content || '').replace(/\n/g, '<br>');
+  let raw = msg.content || '';
+  if (!isUser) raw = raw.replace(/<function=[^>]*>[\s\S]*?<\/function>/g, '').replace(/<function_call>[\s\S]*?<\/function_call>/g, '').trim();
+  const text = escapeHtml(raw).replace(/\n/g, '<br>');
   const imgHtml = msg.image_url ? '<img src="' + msg.image_url + '" class="max-w-full rounded-xl mt-2 max-h-64 object-cover" onerror="this.style.display=&quot;none&quot;">' : '';
   let toolHtml = '';
   try {
@@ -2609,7 +2611,7 @@ async function conexTranscribeAndSend(blob, mimeType) {
   conexState.loading = true;
   renderConexChat();
   try {
-    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const ext = mimeType.includes('mp4') ? 'mp4' : (mimeType.includes('ogg') ? 'ogg' : 'webm');
     const form = new FormData();
     form.append('audio', new File([blob], 'audio.' + ext, { type: mimeType }));
     const { data: { session } } = await sb.auth.getSession();
@@ -2618,11 +2620,13 @@ async function conexTranscribeAndSend(blob, mimeType) {
       headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON_KEY },
       body: form
     });
-    const data = await resp.json();
+    let data = {};
+    try { data = await resp.json(); } catch(e) {}
     if (!resp.ok || !data.text) {
       conexState.loading = false;
       renderConexChat();
-      toast('Não consegui transcrever', 'error');
+      console.warn('transcribe erro', resp.status, data);
+      toast('Erro ao transcrever: ' + (data.error || data.details || resp.status), 'error');
       return;
     }
     conexState.loading = false;
