@@ -939,7 +939,7 @@ function userName() {
   return (currentUser.email || 'Você').split('@')[0];
 }
 
-const APP_VERSION = '2.18.1';
+const APP_VERSION = '2.18.2';
 const CHANGELOG = [
   { v: '2.18', emoji: '💬', title: 'Conex mais natural', items: [
     'Tom mais normal e amigável, menos gírias',
@@ -2485,7 +2485,7 @@ async function conexHandleImage(e) {
   renderConexChat();
   try {
     // Reduz a foto pra ~1024px + converte pra base64 (evita problema de acesso da URL pelo modelo)
-    const dataUrl = await resizeImageToDataUrl(file, 1024, 0.75);
+    const dataUrl = await resizeImageToDataUrl(file, 768, 0.7);
     // Upload async pro storage (pra ter backup, mas não bloqueia)
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
     const path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
